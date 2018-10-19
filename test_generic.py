@@ -6,9 +6,9 @@ import dqo
 from test_models import *
 
 def async_test(f):
-  event_loop = asyncio.new_event_loop()
-  asyncio.set_event_loop(event_loop) # needed?
   def test_f(self):
+    event_loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(event_loop) # needed?
     def f2():
       return f(self)
     coro = asyncio.coroutine(f2)
