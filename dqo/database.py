@@ -1,21 +1,22 @@
-import asyncio, copy, enum, io
+import asyncio, copy, enum, io, types
 
 from .connection import Connection
 
     
 class Database(object):
   
-  def __init__(self, sync_src=None, async_src=None, dialect=None):
+  def __init__(self, src, dialect=None, module=None):
     self.dialect = dialect
-    self.sync_src = sync_src
-    self.async_src = async_src
-
+    if isinstance(module, types.ModuleType):
+      module = module.__name__
+      self.dialect = copy.deepcopy(self.dialect)
+      self.dialect.module = module
+    self.module = module
+    self.src = src
+  
   @property
   def connection(self):
-    if asyncio.get_running_loop():
-      return Connection(self, self.async_src)
-    else:
-      return Connection(self, self.sync_src)
+    return Connection(self, self.src)
   
 
 class EchoDatabase(Database):
@@ -36,10 +37,9 @@ class GenericDialect(object):
     PRIMARY KEY PROCEDURE RIGHT JOIN ROWNUM SELECT SELECT DISTINCT SELECT INTO SELECT TOP SET TABLE TOP TRUNCATE TABLE UNION UNION ALL UNIQUE UPDATE VALUES VIEW WHERE
   '''.lower().split())
 
-  ARG = '?'
-
   def __init__(self):
     self.version = None
+    self.module = None
   
   def __call__(self, version):
     self = copy.deepcopy(self)
@@ -50,10 +50,18 @@ class GenericDialect(object):
     s = s.lower().replace('"','')
     if s not in self.KEYWORDS: return s
     else: return '"%s"' % s
+
+  def arg(self, i):
+    if self.module=='psycopg2':
+      return '%s'
+    elif self.module=='asyncpg':
+      return '$%i' % i
+    else:
+      return '?'
+  
   
 
 class PostgresDialect(GenericDialect):
-  ARG = '%s'
   KEYWORDS = set('''
     A ABORT ABS ABSENT ABSOLUTE ACCESS ACCORDING ACTION ADA ADD ADMIN AFTER AGGREGATE ALL ALLOCATE ALSO ALTER ALWAYS ANALYSE ANALYZE AND ANY ARE ARRAY ARRAY_AGG ARRAY_MAX_CARDINALITY AS ASC 
     ASENSITIVE ASSERTION ASSIGNMENT ASYMMETRIC AT ATOMIC ATTRIBUTE ATTRIBUTES AUTHORIZATION AVG BACKWARD BASE64 BEFORE BEGIN BEGIN_FRAME BEGIN_PARTITION BERNOULLI BETWEEN BIGINT BINARY BIT 

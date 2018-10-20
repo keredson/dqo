@@ -10,5 +10,6 @@ from .table import table
 from .column import Column
 from .database import Database, Dialect
 
-DEFAULT_DB = None
+DEFAULT_SYNC_DB = None
+DEFAULT_ASYNC_DB = None
 

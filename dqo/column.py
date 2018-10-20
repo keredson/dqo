@@ -64,8 +64,8 @@ class Condition:
       elif hasattr(component,'_sql_'):
         component._sql_(d, sql, args)
       else:
-        sql.write(d.ARG)
         args.append(component)
+        sql.write(d.arg(len(args)))
       
   def __and__(self, other):
     return Condition('and', [self, other])

@@ -111,6 +111,9 @@ class Query(object):
     with conn_or_tx or self._db.connection as conn:
       return conn.sync_execute(sql, args)
         
+  async def _async_execute(self, sql, args):
+    async with self._db.connection as conn:
+      return await conn.async_execute(sql, args)
     
       
   def __len__(self):
@@ -123,7 +126,10 @@ class Query(object):
   def _db(self):
     if self._db_: return self._db_
     if self._tbl._db: return self._tbl._db
-    return dqo.DEFAULT_DB
+    if asyncio.get_running_loop():
+      return dqo.DEFAULT_ASYNC_DB
+    else:
+      return dqo.DEFAULT_SYNC_DB
       
   def _sql(self):
     db = self._db
@@ -154,14 +160,16 @@ class Query(object):
     sql.write('insert into ')
     sql.write(d.term(self._tbl._name))
     sql.write(' (')
-    c = 0
+    c = len(args)
+    values = []
     for k,v in self._insert.items():
       if k.startswith('_'): continue
       sql.write(d.term(k))
       args.append(v)
       c += 1
+      values.append(d.arg(c))
     sql.write(') values (')
-    sql.write(','.join([d.ARG for i in range(c)]))
+    sql.write(','.join(values))
     sql.write(')')
       
   def _delete_sql_(self, d, sql, args):
@@ -171,7 +179,8 @@ class Query(object):
       
       
   def _gen_select(self, d):
-    return ','.join([d.term(c._db_name) for c in self._select])
+    columns = self._tbl._columns if self._select is None else self._select
+    return ','.join([d.term(c._db_name) for c in columns])
     
   def _gen_where(self, d, sql, args):
     if not self._conditions: return

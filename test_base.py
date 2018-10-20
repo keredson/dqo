@@ -21,7 +21,7 @@ class Something:
   col2 = dqo.Column(str)
 
 
-class BaseDB:
+class BaseDBSync:
 
   def setUp(self):
     Something.ALL.delete()
@@ -47,24 +47,34 @@ class BaseDB:
   def test_select_nothing(self):
     self.assertEqual(list(Something.ALL), [])
 
-  @async_test
-  async def test_select_all_async(self):
-    async for something in Something.ALL:
-      self.assertEqual(something, 1)
-
   def test_first(self):
     self.assertEqual(Something.ALL.first(), 1)
+
+  def test_len(self):
+    self.assertEqual(len(Something.ALL), 1)
+
+
+class BaseDBAsync:
+
+  @async_test
+  async def setUp(self):
+    await Something.ALL.delete()
+
+  @async_test
+  async def test_select_all_async(self):
+    await Something.ALL.insert(col1=1)
+    saw_something = False
+    async for something in Something.ALL:
+      self.assertEqual(something, 1)
+      saw_something = True
+    self.assertTrue(saw_something)
 
   @async_test
   async def test_first_async(self):
     self.assertEqual(await Something.ALL.first(), 1)
 
-  def test_len(self):
-    self.assertEqual(len(Something.ALL), 1)
-
   @async_test
   async def test_len_async(self):
     self.assertEqual(len(Something.ALL), 1)
-
 
 

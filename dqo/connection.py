@@ -6,16 +6,26 @@ class Connection(object):
   
   def __init__(self, db, get_raw_conn):
     self._get_raw_conn = get_raw_conn
+    print('self._get_raw_conn', self._get_raw_conn.__class__.__name__)
     self._raw_conn = None
 
   async def __aenter__(self):
     print('async entering context')
+    self._raw_conn = await self._get_raw_conn()
+    return self
 
   async def __aexit__(self, exc_type, exc, tb):
     print('async exiting context')
+    if self._raw_conn:
+      await self._raw_conn.close()
+
+  def async_execute(self, sql, args):
+    print('async_execute', sql, args)
+    return self._raw_conn.execute(sql, *args)
+      
 
   def __enter__(self):
-    if self._raw_conn is not None: return OpenConnection(self._raw_conn)
+    if self._raw_conn: return OpenConnection(self._raw_conn)
     self._raw_conn = self._get_raw_conn()
     self._raw_conn.autocommit = True
     TLS.conn_or_tx = self

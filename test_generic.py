@@ -3,7 +3,10 @@ import asyncio
 
 import dqo
 
-from test_models import *
+@dqo.table
+class Something:
+  col1 = dqo.Column(int)
+  col2 = dqo.Column(str)
 
 class GenericSQL(unittest.TestCase):
 
