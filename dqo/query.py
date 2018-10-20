@@ -1,12 +1,15 @@
 import asyncio, copy, enum, io
 
 from .column import Column, AlsoSelect, UnSelect, Condition
+from .database import Dialect
+from .connection import TLS
 
 class CMD(enum.Enum):
   SELECT = 1
   INSERT = 2
   UPDATE = 3
   DELETE = 4
+  INSERT_MANY = 5
 
 class Query(object):
   
@@ -21,9 +24,15 @@ class Query(object):
     self._db_ = db
     
   def __iter__(self):
-    return [].__iter__()
+    if self._select is None:
+      self = copy.deepcopy(self)
+      self._select = self._tbl._columns
+    return SyncIterable(self)
   
   def __aiter__(self):
+    if self._select is None:
+      self = copy.deepcopy(self)
+      self._select = self._tbl._columns
     return AsyncIterable()
   
   def select(self, *columns):
@@ -65,14 +74,47 @@ class Query(object):
     pass
     
   def bind(self, db_or_tx):
-    pass
+    self = copy.deepcopy(self)
+    self._db_ = db_or_tx
+    return self
   
   def first(self):
     if asyncio.get_running_loop():
       return self.__aiter__().__anext__()
     return 1
       
+  def delete(self):
+    self = copy.deepcopy(self)
+    self._cmd = CMD.DELETE
+    return self._execute()
+  
+  def insert(self, *instances, **data):
+    self = copy.deepcopy(self)
+    if instances and data: raise ValueError('Please pass in either args or kwargs, not both.')
+    if instances:
+      self._cmd = CMD.INSERT_MANY
+      self._insert = instances
+    elif data:
+      self._cmd = CMD.INSERT
+      self._insert = data
+    return self._execute()
+  
+  def _execute(self):
+    sql, args = self._sql()
+    if asyncio.get_running_loop():
+      return self._async_execute(sql, args)
+    else: 
+      return self._sync_execute(sql, args)
+  
+  def _sync_execute(self, sql, args):
+    conn_or_tx = TLS.conn_or_tx if hasattr(TLS,'conn_or_tx') else None
+    with conn_or_tx or self._db.connection as conn:
+      return conn.sync_execute(sql, args)
+        
+    
+      
   def __len__(self):
+    # TODO
     if asyncio.get_running_loop():
       return 1
     return 1
@@ -84,7 +126,8 @@ class Query(object):
     return dqo.DEFAULT_DB
       
   def _sql(self):
-    dialect = self._db.dialect
+    db = self._db
+    dialect = db.dialect if db else Dialect.GENERIC
     sql = io.StringIO()
     args = []
     self._sql_(dialect, sql, args)
@@ -96,9 +139,9 @@ class Query(object):
     if self._cmd==CMD.INSERT:
       self._insert_sql_(d, sql, args)
     if self._cmd==CMD.UPDATE:
-      self._select_sql_(d, sql, args)
+      self._update_sql_(d, sql, args)
     if self._cmd==CMD.DELETE:
-      self._select_sql_(d, sql, args)
+      self._delete_sql_(d, sql, args)
 
   def _select_sql_(self, d, sql, args):
     sql.write('select ')
@@ -107,10 +150,28 @@ class Query(object):
     sql.write(d.term(self._tbl._name))
     self._gen_where(d, sql, args)
       
+  def _insert_sql_(self, d, sql, args):
+    sql.write('insert into ')
+    sql.write(d.term(self._tbl._name))
+    sql.write(' (')
+    c = 0
+    for k,v in self._insert.items():
+      if k.startswith('_'): continue
+      sql.write(d.term(k))
+      args.append(v)
+      c += 1
+    sql.write(') values (')
+    sql.write(','.join([d.ARG for i in range(c)]))
+    sql.write(')')
+      
+  def _delete_sql_(self, d, sql, args):
+    sql.write('delete from ')
+    sql.write(d.term(self._tbl._name))
+    self._gen_where(d, sql, args)
+      
       
   def _gen_select(self, d):
-    columns = self._tbl._columns if self._select is None else self._select
-    return ','.join([d.term(c._db_name) for c in columns])
+    return ','.join([d.term(c._db_name) for c in self._select])
     
   def _gen_where(self, d, sql, args):
     if not self._conditions: return
@@ -127,5 +188,23 @@ class AsyncIterable:
     self.done = True
     return 1
 
+
+class SyncIterable:
+  def __init__(self, query):
+    self.query = query
+    sql, args = query._sql()
+    self.keys = [c._name for c in query._select]
+    conn_or_tx = TLS.conn_or_tx if hasattr(TLS,'conn_or_tx') else None
+    if conn_or_tx:
+      self.iter = conn_or_tx.sync_fetch(sql, args).__iter__()
+    else:
+      with query._db.connection as conn:
+        self.iter = list(conn.sync_fetch(sql, args)).__iter__()
+
+  def __next__(self):
+    row = self.iter.__next__()
+    o = self.query._tbl()
+    o.__dict__.update(dict(zip(self.keys, row)))
+    return o
 
 import dqo
