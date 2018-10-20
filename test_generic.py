@@ -10,6 +10,9 @@ class Something:
 
 class GenericSQL(unittest.TestCase):
 
+  def setUp(self):
+    self.echo = dqo.DEFAULT_SYNC_DB = dqo.EchoDatabase()
+
   def test_select_all(self):
     sql, args = Something.ALL._sql()
     self.assertEqual(sql, 'select col1,col2 from something')
@@ -75,6 +78,25 @@ class GenericSQL(unittest.TestCase):
     self.assertEqual(sql, 'select col1,col2 from something where col1=? or (col1=? and col2=?)')
     self.assertEqual(args, [3,1,2])
 
+  def test_delete(self):
+    Something.ALL.delete()
+    self.assertEqual(self.echo.history, [('delete from something', [])])
+
+  def test_delete2(self):
+    Something.ALL.where(col1=2).delete()
+    self.assertEqual(self.echo.history, [('delete from something where col1=?', [2])])
+
+  def test_insert(self):
+    Something.ALL.insert(col1=1, col2=2)
+    self.assertEqual(self.echo.history, [('insert into something (col1,col2) values (?,?)', [1, 2])])
+
+  def test_insert2(self):
+    Something.ALL.insert({'col1':1, 'col2':2})
+    self.assertEqual(self.echo.history, [('insert into something (col1,col2) values (?,?)', [1, 2])])
+
+  def test_update(self):
+    Something.ALL.set(col1=3, col2=2).where(col1=1).update()
+    self.assertEqual(self.echo.history, [('update something set col1=?, col2=? where col1=?', [3,2,1])])
 
 
 

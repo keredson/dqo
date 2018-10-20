@@ -23,8 +23,19 @@ class EchoDatabase(Database):
   
   def __init__(self):
     self.dialect = Dialect.GENERIC
-    self.sync_src = self
-    self.async_src = None
+    self.src = self.conn
+    self.history = []
+  
+  class Connection:
+    def __init__(self, db):
+      self.db = db
+    def cursor(self): return self
+    def close(self): pass
+    def execute(self, sql, args):
+      self.db.history.append((sql, args))
+  
+  def conn(self):  
+    return EchoDatabase.Connection(self)
 
   
 

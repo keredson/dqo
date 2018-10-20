@@ -18,6 +18,7 @@ class Query(object):
     self._db_ = None
     self._cmd = CMD.SELECT
     self._select = None
+    self._set_values = {}
     self._conditions = []
     
   def bind(self, db):
@@ -82,18 +83,32 @@ class Query(object):
     if asyncio.get_running_loop():
       return self.__aiter__().__anext__()
     return 1
+
+  def set(self, **kwargs):
+    self = copy.deepcopy(self)
+    self._set_values.update(kwargs)
+    return self
       
   def delete(self):
     self = copy.deepcopy(self)
     self._cmd = CMD.DELETE
     return self._execute()
   
+  def update(self):
+    self = copy.deepcopy(self)
+    self._cmd = CMD.UPDATE
+    return self._execute()
+  
   def insert(self, *instances, **data):
     self = copy.deepcopy(self)
     if instances and data: raise ValueError('Please pass in either args or kwargs, not both.')
     if instances:
-      self._cmd = CMD.INSERT_MANY
-      self._insert = instances
+      if len(instances)==1:
+        self._cmd = CMD.INSERT
+        self._insert = instances[0]
+      else:
+        self._cmd = CMD.INSERT_MANY
+        self._insert = instances
     elif data:
       self._cmd = CMD.INSERT
       self._insert = data
@@ -156,14 +171,30 @@ class Query(object):
     sql.write(d.term(self._tbl._name))
     self._gen_where(d, sql, args)
       
+  def _update_sql_(self, d, sql, args):
+    sql.write('update ')
+    sql.write(d.term(self._tbl._name))
+    sql.write(' set ')
+    first = True
+    for k,v in self._set_values.items():
+      if first: first = False
+      else: sql.write(', ')
+      sql.write(d.term(k))
+      sql.write('=?')
+      args.append(v)
+    self._gen_where(d, sql, args)
+      
   def _insert_sql_(self, d, sql, args):
     sql.write('insert into ')
     sql.write(d.term(self._tbl._name))
     sql.write(' (')
     c = len(args)
     values = []
+    first = True
     for k,v in self._insert.items():
       if k.startswith('_'): continue
+      if first: first = False
+      else: sql.write(',')
       sql.write(d.term(k))
       args.append(v)
       c += 1
