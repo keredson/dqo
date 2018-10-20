@@ -36,6 +36,9 @@ class EchoDatabase(Database):
   
   def conn(self):  
     return EchoDatabase.Connection(self)
+    
+  def __deepcopy__(self, m):
+    return self
 
   
 

@@ -21,9 +21,6 @@ class Query(object):
     self._set_values = {}
     self._conditions = []
     
-  def bind(self, db):
-    self._db_ = db
-    
   def __iter__(self):
     if self._select is None:
       self = copy.deepcopy(self)

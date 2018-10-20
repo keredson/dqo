@@ -98,6 +98,11 @@ class GenericSQL(unittest.TestCase):
     Something.ALL.set(col1=3, col2=2).where(col1=1).update()
     self.assertEqual(self.echo.history, [('update something set col1=?, col2=? where col1=?', [3,2,1])])
 
+  def test_bind(self):
+    db = dqo.EchoDatabase()
+    Something.ALL.bind(db).set(col1=3, col2=2).where(col1=1).update()
+    self.assertEqual(db.history, [('update something set col1=?, col2=? where col1=?', [3,2,1])])
+
 
 
 

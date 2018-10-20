@@ -11,6 +11,9 @@ class Comparable:
   def __or__(self, other):
     return Condition('or', [self, other])
 
+  def __deepcopy__(self, m):
+    return self
+
 
 class Column(Comparable):
   
