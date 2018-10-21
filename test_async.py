@@ -28,7 +28,7 @@ class BaseAsync:
     await Something.ALL.delete()
 
   @async_test
-  async def test_select_all_async(self):
+  async def test_select_all(self):
     await Something.ALL.insert(col1=1)
     saw_something = False
     async for something in Something.ALL:
@@ -37,8 +37,13 @@ class BaseAsync:
     self.assertTrue(saw_something)
 
   @async_test
-  async def test_first_async(self):
+  async def test_first_none(self):
     self.assertEqual(await Something.ALL.first(), None)
+
+  @async_test
+  async def test_first_something(self):
+    await Something.ALL.insert(col1=1)
+    self.assertEqual((await Something.ALL.first()).col1, 1)
 
   @async_test
   async def test_len_async(self):

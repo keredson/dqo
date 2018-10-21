@@ -32,7 +32,7 @@ class Query(object):
     if self._select is None:
       self = copy.deepcopy(self)
       self._select = self._tbl._columns
-    return AsyncIterable()
+    return AsyncIterable(self)
   
   def select(self, *columns):
     self = copy.deepcopy(self)
@@ -80,8 +80,23 @@ class Query(object):
   
   def first(self):
     self = self.limit(1)
+    if self._select is None:
+      self = copy.deepcopy(self)
+      self._select = self._tbl._columns
     if asyncio.get_running_loop():
-      return self.__aiter__().__anext__()
+      sql, args = self._sql()
+      keys = [c._name for c in self._select]
+      async def f():
+        async with self._db.connection as conn:
+          data = await conn.async_fetch(sql, args)
+          if data:
+            row = data[0]
+            o = self._tbl()
+            o.__dict__.update(dict(zip(keys, row)))
+            return o
+          else:
+            return None
+      return f()
     else:
       values = list(self)
       return values[0] if len(values) else None
@@ -237,11 +252,34 @@ class Query(object):
 
 
 class AsyncIterable:
+
+  def __init__(self, query):
+    self.query = query
+    sql, args = query._sql()
+    self.keys = [c._name for c in query._select]
+    self._inited = False
+  
+  async def _init(self):
+    sql, args = self.query._sql()
+    async with self.query._db.connection as conn:
+      data = await conn.async_fetch(sql, args)
+      async def f():
+        for x in data:
+          yield x
+      self.iter = f().__aiter__()
+      self.data = data
+      self.iter = data.__iter__()
+    self._inited = True
+
   async def __anext__(self):
-    if hasattr(self,'done'):
+    if not self._inited: await self._init()
+    try:
+      row = self.iter.__next__()
+    except StopIteration:
       raise StopAsyncIteration
-    self.done = True
-    return 1
+    o = self.query._tbl()
+    o.__dict__.update(dict(zip(self.keys, row)))
+    return o
 
 
 class SyncIterable:
