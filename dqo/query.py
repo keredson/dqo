@@ -20,6 +20,7 @@ class Query(object):
     self._select = None
     self._set_values = {}
     self._conditions = []
+    self._limit = None
     
   def __iter__(self):
     if self._select is None:
@@ -69,6 +70,7 @@ class Query(object):
     return self
     
   def plus(self, *fks):
+    # TODO
     pass
     
   def bind(self, db_or_tx):
@@ -77,9 +79,20 @@ class Query(object):
     return self
   
   def first(self):
+    self = self.limit(1)
     if asyncio.get_running_loop():
       return self.__aiter__().__anext__()
-    return 1
+    else:
+      values = list(self)
+      return values[0] if len(values) else None
+
+  def limit(self, n):
+    self = copy.deepcopy(self)
+    self._limit = n
+    return self
+
+  def top(self, n):
+    return self.limit(n)
 
   def set(self, **kwargs):
     self = copy.deepcopy(self)
@@ -167,6 +180,10 @@ class Query(object):
     sql.write(' from ')
     sql.write(d.term(self._tbl._name))
     self._gen_where(d, sql, args)
+    if self._limit is not None:
+      sql.write(' limit ')
+      args.append(self._limit)
+      sql.write(d.arg(len(args)))
       
   def _update_sql_(self, d, sql, args):
     sql.write('update ')
@@ -177,8 +194,9 @@ class Query(object):
       if first: first = False
       else: sql.write(', ')
       sql.write(d.term(k))
-      sql.write('=?')
+      sql.write('=')
       args.append(v)
+      sql.write(d.arg(len(args)))
     self._gen_where(d, sql, args)
       
   def _insert_sql_(self, d, sql, args):

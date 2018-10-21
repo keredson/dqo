@@ -120,6 +120,18 @@ class GenericSQL(unittest.TestCase):
       ('update something set col2=? where col1=?', ['woot', 1]),
     ])
 
+  def test_select_limit(self):
+    sql = Something.ALL.limit(2)._sql()
+    self.assertEqual(sql, ('select col1,col2 from something limit ?', [2]))
+
+  def test_select_where_limit(self):
+    sql = Something.ALL.where(col1=1).limit(2)._sql()
+    self.assertEqual(sql, ('select col1,col2 from something where col1=? limit ?', [1,2]))
+
+  def test_select_first(self):
+    sql = Something.ALL.first()
+    self.assertEqual(self.echo.history, [('select col1,col2 from something limit ?', [1])])
+
 
 
 

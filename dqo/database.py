@@ -33,6 +33,8 @@ class EchoDatabase(Database):
     def close(self): pass
     def execute(self, sql, args):
       self.db.history.append((sql, args))
+    def fetchmany(self):
+      return []
   
   def conn(self):  
     return EchoDatabase.Connection(self)

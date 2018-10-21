@@ -34,6 +34,9 @@ class BaseRow(object):
     self._tbl.ALL.set(**{x:self.__dict__.get(x) for x in self._dirty}).where(*[c==self.__dict__.get(c._name) for c in self._tbl._pk]).update()
     self.__dict__['_dirty'] = set()
   
+  def __repr__(self):
+    return '<%s %s>' % (self.__class__.__name__, ' '.join(['%s=%s' % (k,repr(v)) for k,v in self.__dict__.items() if not k.startswith('_')]))
+  
   
 def table(cls):
 

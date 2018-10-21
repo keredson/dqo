@@ -48,7 +48,22 @@ class BaseDBSync:
     self.assertEqual(list(Something.ALL), [])
 
   def test_first(self):
-    self.assertEqual(Something.ALL.first(), 1)
+    self.assertEqual(Something.ALL.first(), None)
+
+  def test_first2(self):
+    Something.ALL.insert(col1=1)
+    self.assertEqual(Something.ALL.first().col1, 1)
+
+  def test_instance_class_name(self):
+    Something.ALL.insert(col1=1)
+    o = Something.ALL.first()
+    self.assertEqual(o.__class__.__name__, 'Something')
+
+  def test_instance_repr(self):
+    Something.ALL.insert(col1=1)
+    o = Something.ALL.first()
+    self.assertEqual(repr(o), '<Something col1=1 col2=None>')
+    
 
   def test_len(self):
     self.assertEqual(len(Something.ALL), 1)
