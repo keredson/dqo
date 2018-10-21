@@ -5,9 +5,10 @@ import asyncpg
 
 import dqo
 
-from test_base import BaseDBSync, BaseDBAsync, async_test
+from test_sync import BaseSync
+from test_async import BaseAsync, async_test
 
-class PostgresSync(BaseDBSync, unittest.TestCase):
+class PostgresSync(BaseSync, unittest.TestCase):
 
   @classmethod
   def setUpClass(cls):
@@ -25,7 +26,7 @@ class PostgresSync(BaseDBSync, unittest.TestCase):
     os.system('dropdb dqo_test')
 
 
-class PostgresAsync(BaseDBAsync, unittest.TestCase):
+class PostgresAsync(BaseAsync, unittest.TestCase):
 
   @classmethod
   def setUpClass(cls):
