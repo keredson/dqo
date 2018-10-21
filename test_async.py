@@ -49,4 +49,12 @@ class BaseAsync:
   async def test_len_async(self):
     self.assertEqual(len(Something.ALL), 1)
 
+  @async_test
+  async def test_order_by(self):
+    await Something.ALL.insert(col1=1)
+    await Something.ALL.insert(col1=2)
+    o = await Something.ALL.order_by(Something.col1).first()
+    self.assertEqual(o.col1, 1)
+    o = await Something.ALL.order_by(Something.col1.desc).first()
+    self.assertEqual(o.col1, 2)
 

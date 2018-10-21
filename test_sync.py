@@ -52,6 +52,14 @@ class BaseSync:
     o = Something.ALL.first()
     self.assertEqual(repr(o), '<Something col1=1 col2=None>')
     
+  def test_order_by(self):
+    Something.ALL.insert(col1=1)
+    Something.ALL.insert(col1=2)
+    o = Something.ALL.order_by(Something.col1).first()
+    self.assertEqual(o.col1, 1)
+    o = Something.ALL.order_by(Something.col1.desc).first()
+    self.assertEqual(o.col1, 2)
+    
 
   def test_len(self):
     self.assertEqual(len(Something.ALL), 1)

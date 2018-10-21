@@ -1,6 +1,6 @@
 import asyncio, copy, enum, io
 
-from .column import Column, AlsoSelect, UnSelect, Condition
+from .column import Column, PosColumn, NegColumn, Condition
 from .database import Dialect
 from .connection import TLS
 
@@ -21,6 +21,7 @@ class Query(object):
     self._set_values = {}
     self._conditions = []
     self._limit = None
+    self._order_by = None
     
   def __iter__(self):
     if self._select is None:
@@ -45,9 +46,9 @@ class Query(object):
     for x in columns:
       if isinstance(x, Column):
         select.append(x)
-      elif isinstance(x, AlsoSelect):
+      elif isinstance(x, PosColumn):
         alsoselect.append(x.column)
-      elif isinstance(x, UnSelect):
+      elif isinstance(x, NegColumn):
         unselect.add(x.column._db_name)
       else:
         raise ValueError('unknown type %s' % s)
@@ -72,6 +73,11 @@ class Query(object):
   def plus(self, *fks):
     # TODO
     pass
+    
+  def order_by(self, *columns):
+    self = copy.deepcopy(self)
+    self._order_by = columns
+    return self
     
   def bind(self, db_or_tx):
     self = copy.deepcopy(self)
@@ -195,6 +201,17 @@ class Query(object):
     sql.write(' from ')
     sql.write(d.term(self._tbl._name))
     self._gen_where(d, sql, args)
+    if self._order_by:
+      sql.write(' order by ')
+      first = True
+      for col in self._order_by:
+        if first: first = False
+        else: sql.write(', ')
+        sql.write(d.term(col._db_name))
+        if isinstance(col, PosColumn):
+          sql.write(' asc')
+        if isinstance(col, NegColumn):
+          sql.write(' desc')
     if self._limit is not None:
       sql.write(' limit ')
       args.append(self._limit)

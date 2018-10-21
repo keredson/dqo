@@ -27,22 +27,39 @@ class Column(Comparable):
     self._db_name = name
   
   def __pos__(self):
-    return AlsoSelect(self)
+    return PosColumn(self)
 
   def __neg__(self):
-    return UnSelect(self)
+    return NegColumn(self)
 
   def _sql_(self, d, sql, args):
     sql.write(d.term(self._db_name))
 
+  def __deepcopy__(self, m):
+    return self
+    
+  @property
+  def asc(self):
+    return +self
 
-class AlsoSelect:
+  @property
+  def desc(self):
+    return -self
+
+
+class PosColumn:
   def __init__(self, column):
     self.column = column
+  @property
+  def _db_name(self):
+    return self.column._db_name
     
-class UnSelect:
+class NegColumn:
   def __init__(self, column):
     self.column = column    
+  @property
+  def _db_name(self):
+    return self.column._db_name
 
 
 class Condition:
@@ -77,4 +94,7 @@ class Condition:
 
   def __or__(self, other):
     return Condition('or', [self, other])
+  
+  def __deepcopy__(self, m):
+    return self
   

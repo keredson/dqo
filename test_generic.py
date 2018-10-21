@@ -8,7 +8,7 @@ class Something:
   col1 = dqo.Column(int, primary_key=True)
   col2 = dqo.Column(str)
 
-class GenericSQL(unittest.TestCase):
+class SQL(unittest.TestCase):
 
   def setUp(self):
     self.echo = dqo.DEFAULT_SYNC_DB = dqo.EchoDatabase()
@@ -131,6 +131,31 @@ class GenericSQL(unittest.TestCase):
   def test_select_first(self):
     sql = Something.ALL.first()
     self.assertEqual(self.echo.history, [('select col1,col2 from something limit ?', [1])])
+
+  def test_order_by(self):
+    sql = Something.ALL.order_by(Something.col1)._sql()
+    self.assertEqual(sql, ('select col1,col2 from something order by col1', []))
+
+  def test_order_desc(self):
+    sql = Something.ALL.order_by(Something.col1.desc)._sql()
+    self.assertEqual(sql, ('select col1,col2 from something order by col1 desc', []))
+    sql = Something.ALL.order_by(-Something.col1)._sql()
+    self.assertEqual(sql, ('select col1,col2 from something order by col1 desc', []))
+
+  def test_order_asc(self):
+    sql = Something.ALL.order_by(Something.col1.asc)._sql()
+    self.assertEqual(sql, ('select col1,col2 from something order by col1 asc', []))
+    sql = Something.ALL.order_by(+Something.col1)._sql()
+    self.assertEqual(sql, ('select col1,col2 from something order by col1 asc', []))
+
+  def test_order_by_multiple(self):
+    sql = Something.ALL.order_by(Something.col1, -Something.col2)._sql()
+    self.assertEqual(sql, ('select col1,col2 from something order by col1, col2 desc', []))
+
+  def test_order_by_clobber(self):
+    # order by should always clobber any previous calls to order by on the same query object
+    sql = Something.ALL.order_by(Something.col1).order_by(Something.col2)._sql()
+    self.assertEqual(sql, ('select col1,col2 from something order by col2', []))
 
 
 
