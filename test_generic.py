@@ -5,7 +5,7 @@ import dqo
 
 @dqo.table
 class Something:
-  col1 = dqo.Column(int)
+  col1 = dqo.Column(int, primary_key=True)
   col2 = dqo.Column(str)
 
 class GenericSQL(unittest.TestCase):
@@ -102,6 +102,23 @@ class GenericSQL(unittest.TestCase):
     db = dqo.EchoDatabase()
     Something.ALL.bind(db).set(col1=3, col2=2).where(col1=1).update()
     self.assertEqual(db.history, [('update something set col1=?, col2=? where col1=?', [3,2,1])])
+
+  def test_insert_via_save(self):
+    s = Something()
+    s.col1 = 2
+    s.save()
+    self.assertEqual(self.echo.history, [('insert into something (col1) values (?)', [2])])
+
+  def test_update_via_save(self):
+    s = Something()
+    s.col1 = 1
+    s.save()
+    s.col2 = 'woot'
+    s.save()
+    self.assertEqual(self.echo.history, [
+      ('insert into something (col1) values (?)', [1]),
+      ('update something set col2=? where col1=?', ['woot', 1]),
+    ])
 
 
 

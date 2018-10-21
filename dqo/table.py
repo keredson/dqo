@@ -10,8 +10,8 @@ class BaseTable(object):
 class BaseRow(object):
 
   def __init__(self):
-    self._new = True
-    self._dirty = set()
+    self.__dict__['_new'] = True
+    self.__dict__['_dirty'] = set()
 
   def __setattr__(self, attr, value):
     dirty = not attr.startswith('_') and (attr not in self.__dict__ or self.__dict__[attr]!=value)
@@ -26,6 +26,13 @@ class BaseRow(object):
   
   def insert(self):
     self._tbl.ALL.insert(**self.__dict__)
+    self.__dict__['_new'] = False
+    self.__dict__['_dirty'] = set()
+  
+  def update(self):
+    if not self._tbl._pk: raise Exception("cannot update a row without a primary key")
+    self._tbl.ALL.set(**{x:self.__dict__.get(x) for x in self._dirty}).where(*[c==self.__dict__.get(c._name) for c in self._tbl._pk]).update()
+    self.__dict__['_dirty'] = set()
   
   
 def table(cls):
@@ -48,6 +55,7 @@ def table(cls):
   Row.__name__ = cls.__name__
   for col in Table._columns:
     setattr(Table, col._name, col)
+  Table._pk = tuple([c for c in Table._columns if c.primary_key])
   Table._db = cls._db if hasattr(cls, '_db') else None
   
   return Table

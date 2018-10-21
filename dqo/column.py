@@ -17,8 +17,10 @@ class Comparable:
 
 class Column(Comparable):
   
-  def __init__(self, kind):
+  def __init__(self, kind, primary_key=False, default=None):
     self.kind = kind
+    self.primary_key = primary_key
+    self.default = default
     
   def _set_name(self, name):
     self._name = name
