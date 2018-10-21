@@ -179,7 +179,7 @@ class Query(object):
       
   def _sql(self):
     db = self._db
-    dialect = db.dialect if db else Dialect.GENERIC
+    dialect = (db.dialect if db else Dialect.GENERIC).for_query()
     sql = io.StringIO()
     args = []
     self._sql_(dialect, sql, args)
@@ -215,7 +215,7 @@ class Query(object):
     if self._limit is not None:
       sql.write(' limit ')
       args.append(self._limit)
-      sql.write(d.arg(len(args)))
+      sql.write(d.arg)
       
   def _update_sql_(self, d, sql, args):
     sql.write('update ')
@@ -228,14 +228,13 @@ class Query(object):
       sql.write(d.term(k))
       sql.write('=')
       args.append(v)
-      sql.write(d.arg(len(args)))
+      sql.write(d.arg)
     self._gen_where(d, sql, args)
       
   def _insert_sql_(self, d, sql, args):
     sql.write('insert into ')
     sql.write(d.term(self._tbl._name))
     sql.write(' (')
-    c = len(args)
     values = []
     first = True
     for k,v in self._insert.items():
@@ -244,8 +243,7 @@ class Query(object):
       else: sql.write(',')
       sql.write(d.term(k))
       args.append(v)
-      c += 1
-      values.append(d.arg(c))
+      values.append(d.arg)
     sql.write(') values (')
     sql.write(','.join(values))
     sql.write(')')

@@ -5,13 +5,8 @@ from .connection import Connection
     
 class Database(object):
   
-  def __init__(self, src, dialect=None, module=None):
+  def __init__(self, src, dialect=None):
     self.dialect = dialect
-    if isinstance(module, types.ModuleType):
-      module = module.__name__
-      self.dialect = copy.deepcopy(self.dialect)
-      self.dialect.module = module
-    self.module = module
     self.src = src
   
   @property
@@ -55,11 +50,14 @@ class GenericDialect(object):
 
   def __init__(self):
     self.version = None
-    self.module = None
+    self.lib = None
   
-  def __call__(self, version):
+  def __call__(self, version=None, lib=None):
     self = copy.deepcopy(self)
-    self.version = version
+    self.version = version or self.version
+    if isinstance(lib, types.ModuleType):
+      lib = lib.__name__
+    self.lib = lib or self.lib
     return self
   
   def term(self, s):
@@ -67,13 +65,17 @@ class GenericDialect(object):
     if s not in self.KEYWORDS: return s
     else: return '"%s"' % s
 
-  def arg(self, i):
-    if self.module=='psycopg2':
-      return '%s'
-    elif self.module=='asyncpg':
-      return '$%i' % i
-    else:
-      return '?'
+  @property
+  def arg(self):
+    self.arg_counter += 1
+    if self.lib=='psycopg2': return '%s'
+    elif self.lib=='asyncpg': return '$%i' % self.arg_counter
+    else: return '?'
+  
+  def for_query(self):
+    self = copy.deepcopy(self)
+    self.arg_counter = 0
+    return self
   
   
 

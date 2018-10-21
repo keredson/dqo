@@ -87,7 +87,7 @@ class Condition:
         component._sql_(d, sql, args)
       else:
         args.append(component)
-        sql.write(d.arg(len(args)))
+        sql.write(d.arg)
       
   def __and__(self, other):
     return Condition('and', [self, other])

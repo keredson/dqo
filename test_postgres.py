@@ -14,8 +14,7 @@ class PostgresSync(BaseSync, unittest.TestCase):
   def setUpClass(cls):
     os.system('createdb dqo_test')
     dqo.DEFAULT_SYNC_DB = dqo.Database(
-      dialect=dqo.Dialect.POSTGRES('10'), 
-      module=psycopg2,
+      dialect=dqo.Dialect.POSTGRES('10', lib=psycopg2), 
       src=lambda: psycopg2.connect("dbname='dqo_test'"),
     )
     with dqo.DEFAULT_SYNC_DB.connection as conn:
@@ -32,8 +31,7 @@ class PostgresAsync(BaseAsync, unittest.TestCase):
   def setUpClass(cls):
     os.system('createdb dqo_test')
     dqo.DEFAULT_ASYNC_DB = dqo.Database(
-      dialect=dqo.Dialect.POSTGRES('10'),
-      module=asyncpg, 
+      dialect=dqo.Dialect.POSTGRES('10', lib=asyncpg),
       src=lambda: asyncpg.connect(database='dqo_test')
     )
     @async_test
