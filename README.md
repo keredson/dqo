@@ -1,6 +1,7 @@
 ![dqo](docs/logo.png)
 
 [![Documentation Status](https://readthedocs.org/projects/dqo/badge/?version=latest)](https://dqo.readthedocs.io/en/latest/?badge=latest)
+[![Build Status](https://travis-ci.com/keredson/dqo.svg?branch=master)](https://travis-ci.com/keredson/dqo)
 
 Data Query Objects
 ==================
