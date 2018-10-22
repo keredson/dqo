@@ -61,8 +61,5 @@ class BaseSync:
     self.assertEqual(o.col1, 2)
     
 
-  def test_len(self):
-    self.assertEqual(len(Something.ALL), 1)
-
 
 

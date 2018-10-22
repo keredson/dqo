@@ -87,6 +87,9 @@ class Query(object):
   
   def first(self):
     self = self.limit(1)
+    if self._select is None:	
+      self = copy.deepcopy(self)	
+      self._select = self._tbl._columns	
     if asyncio.get_running_loop():
       sql, args = self._sql()
       keys = [c._name for c in self._select]

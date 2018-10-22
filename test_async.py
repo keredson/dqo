@@ -46,10 +46,6 @@ class BaseAsync:
     self.assertEqual((await Something.ALL.first()).col1, 1)
 
   @async_test
-  async def test_len_async(self):
-    self.assertEqual(len(Something.ALL), 1)
-
-  @async_test
   async def test_order_by(self):
     await Something.ALL.insert(col1=1)
     await Something.ALL.insert(col1=2)
