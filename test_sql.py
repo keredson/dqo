@@ -173,6 +173,30 @@ class SQL(unittest.TestCase):
     Something.ALL.count_by(Something.col1, Something.col2)
     self.assertEqual(self.echo.history, [('select col1,col2,count(1) from something group by col1,col2', [])])
 
+  def test_select_where_eq(self):
+    sql = Something.ALL.where(Something.col1 == 2)._sql()
+    self.assertEqual(sql, ('select col1,col2 from something where col1=?', [2]))
+
+  def test_select_where_ne(self):
+    sql = Something.ALL.where(Something.col1 != 2)._sql()
+    self.assertEqual(sql, ('select col1,col2 from something where col1<>?', [2]))
+
+  def test_select_where_gt(self):
+    sql = Something.ALL.where(Something.col1 > 2)._sql()
+    self.assertEqual(sql, ('select col1,col2 from something where col1>?', [2]))
+
+  def test_select_where_lt(self):
+    sql = Something.ALL.where(Something.col1 < 2)._sql()
+    self.assertEqual(sql, ('select col1,col2 from something where col1<?', [2]))
+
+  def test_select_where_gte(self):
+    sql = Something.ALL.where(Something.col1 >= 2)._sql()
+    self.assertEqual(sql, ('select col1,col2 from something where col1>=?', [2]))
+
+  def test_select_where_lte(self):
+    sql = Something.ALL.where(Something.col1 <= 2)._sql()
+    self.assertEqual(sql, ('select col1,col2 from something where col1<=?', [2]))
+
 
 
 if __name__ == '__main__':

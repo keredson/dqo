@@ -5,6 +5,21 @@ class Comparable:
   def __eq__(self, other):
     return Condition('=', [self, other], sep='')
 
+  def __ne__(self, other):
+    return Condition('<>', [self, other], sep='')
+
+  def __gt__(self, other):
+    return Condition('>', [self, other], sep='')
+
+  def __lt__(self, other):
+    return Condition('<', [self, other], sep='')
+
+  def __ge__(self, other):
+    return Condition('>=', [self, other], sep='')
+
+  def __le__(self, other):
+    return Condition('<=', [self, other], sep='')
+
   def __and__(self, other):
     return Condition('and', [self, other])
 
