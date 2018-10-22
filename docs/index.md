@@ -1,5 +1,5 @@
-Derek's Query Objects (`dqo`)
-===============================
+Derek's Query Objects
+=====================
 
 .. toctree::
    :maxdepth: 2
