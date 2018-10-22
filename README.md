@@ -1,5 +1,8 @@
-Derek's Query Objects
-=====================
+
+![dqo](docs/logo.png)
+
+Data Query Objects
+==================
 
 A micro-ORM supporting sync and async Python code in one library.
 

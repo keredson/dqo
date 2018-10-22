@@ -51,7 +51,7 @@ templates_path = ['_templates']
 # You can specify multiple suffix as a list of string:
 #
 # source_suffix = ['.rst', '.md']
-source_suffix = '.md'
+source_suffix = '.rst'
 
 # The master toctree document.
 master_doc = 'index'
@@ -181,4 +181,8 @@ epub_exclude_files = ['search.html']
 #source_parsers = {
 #   '.md': 'recommonmark.parser.CommonMarkParser',
 #}
+
+
+def setup(app):
+    app.add_stylesheet('custom.css')
 

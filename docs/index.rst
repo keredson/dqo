@@ -1,9 +1,20 @@
-Derek's Query Objects
-=====================
+
+    
+
+
+.. image:: logo.png
+
+
+Data Query Objects
+==================
+
+
 
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
+   
+   api
 
 
 

@@ -22,7 +22,6 @@ class Connection(object):
   def async_fetch(self, sql, args):
     #return self._raw_conn.cursor(sql, *args) # for streaming
     return self._raw_conn.fetch(sql, *args)
-      
 
   def __enter__(self):
     if self._raw_conn: return OpenConnection(self._raw_conn)
