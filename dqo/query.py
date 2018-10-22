@@ -3,6 +3,7 @@ import asyncio, copy, enum, io
 from .column import Column, PosColumn, NegColumn, Condition
 from .database import Dialect
 from .connection import TLS
+from .function import fn
 
 class CMD(enum.Enum):
   SELECT = 1
@@ -86,9 +87,6 @@ class Query(object):
   
   def first(self):
     self = self.limit(1)
-    if self._select is None:
-      self = copy.deepcopy(self)
-      self._select = self._tbl._columns
     if asyncio.get_running_loop():
       sql, args = self._sql()
       keys = [c._name for c in self._select]
@@ -125,6 +123,29 @@ class Query(object):
     self._cmd = CMD.DELETE
     return self._execute()
   
+  def count(self):
+    self = copy.deepcopy(self)
+    self._select = [fn.count(1)]
+    return self._fetch_scalar()
+
+  def _fetch_scalar(self):
+    sql, args = self._sql()
+    if asyncio.get_running_loop():
+      return self._async_fetch_scalar(sql, args)
+    else: 
+      return self._sync_fetch_scalar(sql, args)
+
+  def _sync_fetch_scalar(self, sql, args):
+    conn_or_tx = TLS.conn_or_tx if hasattr(TLS,'conn_or_tx') else None
+    with conn_or_tx or self._db.connection as conn:
+      data = list(conn.sync_fetch(sql, args))
+      return data[0][0] if data and data[0] else None
+        
+  async def _async_fetch_scalar(self, sql, args):
+    async with self._db.connection as conn:
+      # TODO
+      return await conn.async_execute(sql, args)
+      
   def update(self):
     self = copy.deepcopy(self)
     self._cmd = CMD.UPDATE
@@ -161,13 +182,6 @@ class Query(object):
     async with self._db.connection as conn:
       return await conn.async_execute(sql, args)
     
-      
-  def __len__(self):
-    # TODO
-    if asyncio.get_running_loop():
-      return 1
-    return 1
-
   @property
   def _db(self):
     if self._db_: return self._db_
@@ -197,7 +211,7 @@ class Query(object):
 
   def _select_sql_(self, d, sql, args):
     sql.write('select ')
-    sql.write(self._gen_select(d))
+    self._gen_select(d, sql, args)
     sql.write(' from ')
     sql.write(d.term(self._tbl._name))
     self._gen_where(d, sql, args)
@@ -252,11 +266,18 @@ class Query(object):
     sql.write('delete from ')
     sql.write(d.term(self._tbl._name))
     self._gen_where(d, sql, args)
-      
-      
-  def _gen_select(self, d):
-    columns = self._tbl._columns if self._select is None else self._select
-    return ','.join([d.term(c._db_name) for c in columns])
+            
+  def _gen_select(self, d, sql, args):
+    components = self._tbl._columns if self._select is None else self._select
+    first = True
+    for component in components:
+      if first: first = None
+      else: sql.write(',')
+      if hasattr(component,'_sql_'):
+        component._sql_(d, sql, args)
+      else:
+        sql.write(d.arg)
+        args.append(component)
     
   def _gen_where(self, d, sql, args):
     if not self._conditions: return

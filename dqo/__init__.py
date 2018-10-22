@@ -6,9 +6,10 @@ if not hasattr(asyncio, 'get_running_loop'):
     return loop if loop.is_running() else None
   asyncio.get_running_loop = get_running_loop
 
-from .table import table
+from .table import Table
 from .column import Column
 from .database import Database, Dialect, EchoDatabase
+from .function import fn
 
 DEFAULT_SYNC_DB = None
 DEFAULT_ASYNC_DB = None

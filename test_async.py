@@ -15,7 +15,7 @@ def async_test(af):
   return test_f
 
 
-@dqo.table
+@dqo.Table
 class Something:
   col1 = dqo.Column(int)
   col2 = dqo.Column(str)

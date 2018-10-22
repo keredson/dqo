@@ -38,7 +38,7 @@ class BaseRow(object):
     return '<%s %s>' % (self.__class__.__name__, ' '.join(['%s=%s' % (k,repr(v)) for k,v in self.__dict__.items() if not k.startswith('_')]))
   
   
-def table(cls):
+def Table(cls):
 
   class Table(BaseTable):
     _name = cls._name if hasattr(cls, '_name') else cls.__name__.lower()

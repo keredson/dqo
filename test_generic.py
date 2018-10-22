@@ -3,7 +3,7 @@ import asyncio
 
 import dqo
 
-@dqo.table
+@dqo.Table
 class Something:
   col1 = dqo.Column(int, primary_key=True)
   col2 = dqo.Column(str)
@@ -157,6 +157,9 @@ class SQL(unittest.TestCase):
     sql = Something.ALL.order_by(Something.col1).order_by(Something.col2)._sql()
     self.assertEqual(sql, ('select col1,col2 from something order by col2', []))
 
+  def test_count(self):
+    Something.ALL.count()
+    self.assertEqual(self.echo.history, [('select count(?) from something', [1])])
 
 
 
