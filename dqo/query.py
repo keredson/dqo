@@ -3,7 +3,7 @@ import asyncio, copy, enum, io
 from .column import Column, PosColumn, NegColumn, Condition
 from .database import Dialect
 from .connection import TLS
-from .function import fn
+from .function import fn, literal
 
 class CMD(enum.Enum):
   SELECT = 1
@@ -23,6 +23,7 @@ class Query(object):
     self._conditions = []
     self._limit = None
     self._order_by = None
+    self._group_by = None
     
   def __iter__(self):
     if self._select is None:
@@ -128,9 +129,47 @@ class Query(object):
   
   def count(self):
     self = copy.deepcopy(self)
-    self._select = [fn.count(1)]
+    self._select = [fn.count(literal(1))]
     return self._fetch_scalar()
 
+  def count_by(self, *columns):
+    self = copy.deepcopy(self)
+    self._select = list(columns) + [fn.count(literal(1))]
+    self._group_by = columns
+    return self._fetch_map(len(columns))
+
+  def _fetch_map(self, len_keys):
+    sql, args = self._sql()
+    if asyncio.get_running_loop():
+      return self._async_fetch_map(sql, args, len_keys)
+    else: 
+      return self._sync_fetch_map(sql, args, len_keys)
+
+  @property
+  def _conn_or_tx_sync(self):
+    conn_or_tx = TLS.conn_or_tx if hasattr(TLS,'conn_or_tx') else None
+    if not conn_or_tx:
+      conn_or_tx = self._db.connection
+    return conn_or_tx
+
+  @property
+  def _conn_or_tx_async(self):
+    return self._db.connection
+
+  def _sync_fetch_map(self, sql, args, len_keys):
+    with self._conn_or_tx_sync as conn:
+      data = list(conn.sync_fetch(sql, args))
+      if len_keys > 1:
+        data = [(tuple(r[:len_keys]),r[len_keys]) for r in data]
+      return dict(data)
+        
+  async def _async_fetch_map(self, sql, args, len_keys):
+    async with self._conn_or_tx_async as conn:
+      data = await conn.async_fetch(sql, args)
+      if len_keys > 1:
+        data = [(tuple(r[:len_keys]),r[len_keys]) for r in data]
+      return dict(data)
+      
   def _fetch_scalar(self):
     sql, args = self._sql()
     if asyncio.get_running_loop():
@@ -139,15 +178,14 @@ class Query(object):
       return self._sync_fetch_scalar(sql, args)
 
   def _sync_fetch_scalar(self, sql, args):
-    conn_or_tx = TLS.conn_or_tx if hasattr(TLS,'conn_or_tx') else None
-    with conn_or_tx or self._db.connection as conn:
+    with self._conn_or_tx_sync as conn:
       data = list(conn.sync_fetch(sql, args))
       return data[0][0] if data and data[0] else None
         
   async def _async_fetch_scalar(self, sql, args):
-    async with self._db.connection as conn:
-      # TODO
-      return await conn.async_execute(sql, args)
+    async with self._conn_or_tx_async as conn:
+      data = await conn.async_fetch(sql, args)
+      return data[0][0] if data and data[0] else None
       
   def update(self):
     self = copy.deepcopy(self)
@@ -177,12 +215,11 @@ class Query(object):
       return self._sync_execute(sql, args)
   
   def _sync_execute(self, sql, args):
-    conn_or_tx = TLS.conn_or_tx if hasattr(TLS,'conn_or_tx') else None
-    with conn_or_tx or self._db.connection as conn:
+    with self._conn_or_tx_sync as conn:
       return conn.sync_execute(sql, args)
         
   async def _async_execute(self, sql, args):
-    async with self._db.connection as conn:
+    async with self._conn_or_tx_async as conn:
       return await conn.async_execute(sql, args)
     
   @property
@@ -218,17 +255,20 @@ class Query(object):
     sql.write(' from ')
     sql.write(d.term(self._tbl._name))
     self._gen_where(d, sql, args)
+    if self._group_by:
+      sql.write(' group by ')
+      first = True
+      for col in self._group_by:
+        if first: first = False
+        else: sql.write(',')
+        col._sql_(d, sql, args)
     if self._order_by:
       sql.write(' order by ')
       first = True
       for col in self._order_by:
         if first: first = False
         else: sql.write(', ')
-        sql.write(d.term(col._db_name))
-        if isinstance(col, PosColumn):
-          sql.write(' asc')
-        if isinstance(col, NegColumn):
-          sql.write(' desc')
+        col._sql_(d, sql, args)
     if self._limit is not None:
       sql.write(' limit ')
       args.append(self._limit)
@@ -287,7 +327,6 @@ class Query(object):
     sql.write(' where ')
     condition = self._conditions[0] if len(self._conditions)==1 else Condition('and', self._conditions)
     condition._sql_(d, sql, args)
-    
 
 
 class AsyncIterable:

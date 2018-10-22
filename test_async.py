@@ -54,3 +54,28 @@ class BaseAsync:
     o = await Something.ALL.order_by(Something.col1.desc).first()
     self.assertEqual(o.col1, 2)
 
+  @async_test
+  async def test_count(self):
+    await Something.ALL.insert(col1=1)
+    await Something.ALL.insert(col1=2)
+    self.assertEqual(await Something.ALL.count(), 2)
+    
+  @async_test
+  async def test_count_by(self):
+    await Something.ALL.insert(col1=1)
+    await Something.ALL.insert(col1=2)
+    self.assertEqual(await Something.ALL.count_by(Something.col1), {1:1,2:1})
+    
+  @async_test
+  async def test_count_by_order(self):
+    await Something.ALL.insert(col1=1)
+    await Something.ALL.insert(col1=2)
+    d = await Something.ALL.order_by(dqo.fn.count.desc).count_by(Something.col1)
+    self.assertEqual(list(d.items()), [(2,1),(1,1)])
+
+  @async_test
+  async def test_count_by_2_cols(self):
+    await Something.ALL.insert(col1=1)
+    await Something.ALL.insert(col1=2)
+    self.assertEqual(await Something.ALL.count_by(Something.col1, Something.col2), {(1,None):1,(2,None):1})
+

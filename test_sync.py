@@ -60,6 +60,26 @@ class BaseSync:
     o = Something.ALL.order_by(Something.col1.desc).first()
     self.assertEqual(o.col1, 2)
     
+  def test_count(self):
+    Something.ALL.insert(col1=1)
+    Something.ALL.insert(col1=2)
+    self.assertEqual(Something.ALL.count(), 2)
+    
+  def test_count_by(self):
+    Something.ALL.insert(col1=1)
+    Something.ALL.insert(col1=2)
+    self.assertEqual(Something.ALL.count_by(Something.col1), {1:1,2:1})
+    
+  def test_count_by_order(self):
+    Something.ALL.insert(col1=1)
+    Something.ALL.insert(col1=2)
+    self.assertEqual(list(Something.ALL.order_by(dqo.fn.count.desc).count_by(Something.col1).items()), [(2,1),(1,1)])
+    
+  def test_count_by_2_cols(self):
+    Something.ALL.insert(col1=1)
+    Something.ALL.insert(col1=2)
+    self.assertEqual(Something.ALL.count_by(Something.col1, Something.col2), {(1,None):1,(2,None):1})
+    
 
 
 

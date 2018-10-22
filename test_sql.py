@@ -159,7 +159,19 @@ class SQL(unittest.TestCase):
 
   def test_count(self):
     Something.ALL.count()
-    self.assertEqual(self.echo.history, [('select count(?) from something', [1])])
+    self.assertEqual(self.echo.history, [('select count(1) from something', [])])
+
+  def test_count_by(self):
+    Something.ALL.count_by(Something.col1)
+    self.assertEqual(self.echo.history, [('select col1,count(1) from something group by col1', [])])
+
+  def test_order_by_count(self):
+    Something.ALL.order_by(dqo.fn.count().desc).count_by(Something.col1)
+    self.assertEqual(self.echo.history, [('select col1,count(1) from something group by col1 order by count(1) desc', [])])
+
+  def test_count_by_2_cols(self):
+    Something.ALL.count_by(Something.col1, Something.col2)
+    self.assertEqual(self.echo.history, [('select col1,col2,count(1) from something group by col1,col2', [])])
 
 
 

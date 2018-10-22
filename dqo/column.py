@@ -50,16 +50,16 @@ class Column(Comparable):
 class PosColumn:
   def __init__(self, column):
     self.column = column
-  @property
-  def _db_name(self):
-    return self.column._db_name
+  def _sql_(self, d, sql, args):
+    self.column._sql_(d, sql, args)
+    sql.write(' asc')
     
 class NegColumn:
   def __init__(self, column):
     self.column = column    
-  @property
-  def _db_name(self):
-    return self.column._db_name
+  def _sql_(self, d, sql, args):
+    self.column._sql_(d, sql, args)
+    sql.write(' desc')
 
 
 class Condition:
