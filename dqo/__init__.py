@@ -9,7 +9,7 @@ if not hasattr(asyncio, 'get_running_loop'):
 from .table import Table
 from .column import Column
 from .database import Database, Dialect, EchoDatabase
-from .function import fn
+from .function import sql
 
 DEFAULT_SYNC_DB = None
 DEFAULT_ASYNC_DB = None

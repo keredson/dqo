@@ -73,7 +73,7 @@ class BaseSync:
   def test_count_by_order(self):
     Something.ALL.insert(col1=1)
     Something.ALL.insert(col1=2)
-    self.assertEqual(list(Something.ALL.order_by(dqo.fn.count.desc).count_by(Something.col1).items()), [(2,1),(1,1)])
+    self.assertEqual(list(Something.ALL.order_by(dqo.sql.count.desc).count_by(Something.col1).items()), [(2,1),(1,1)])
     
   def test_count_by_2_cols(self):
     Something.ALL.insert(col1=1)

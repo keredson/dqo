@@ -3,7 +3,7 @@ import asyncio, copy, enum, io
 from .column import Column, PosColumn, NegColumn, Condition
 from .database import Dialect
 from .connection import TLS
-from .function import fn, literal
+from .function import sql
 
 class CMD(enum.Enum):
   SELECT = 1
@@ -141,12 +141,12 @@ class Query(object):
   
   def count(self):
     self = copy. copy(self)
-    self._select = [fn.count(literal(1))]
+    self._select = [sql.count(sql(1))]
     return self._fetch_scalar()
 
   def count_by(self, *columns):
     self = copy. copy(self)
-    self._select = list(columns) + [fn.count(literal(1))]
+    self._select = list(columns) + [sql.count(sql(1))]
     self._group_by = columns
     return self._fetch_map(len(columns))
 

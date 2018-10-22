@@ -45,26 +45,20 @@ class CountFunction(Function):
   def __init__(self, name, args=None):
     self.name = name
     if not args: args = [1]
-    args = [literal(a) if a in (1,'*') else a for a in args]
+    args = [sql(a) if a in (1,'*') else a for a in args]
     self.args = args
 
 
 class FunctionGenerator:
+
   def __getattr__(self, fn_name):
     if fn_name.lower()=='count': return CountFunction(fn_name)
     return Function(fn_name)
 
+  def __call__(self, arg):
+    return Function(str(arg))
+
     
-fn = FunctionGenerator()
+sql = FunctionGenerator()
 
-class Literal:
-  
-  def __init__(self, v):
-    self.v = str(v)
 
-  def _sql_(self, d, sql, args):
-    sql.write(self.v)
-
-def literal(v):
-  return Literal(v)
-  

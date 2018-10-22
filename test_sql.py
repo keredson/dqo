@@ -166,7 +166,7 @@ class SQL(unittest.TestCase):
     self.assertEqual(self.echo.history, [('select col1,count(1) from something group by col1', [])])
 
   def test_order_by_count(self):
-    Something.ALL.order_by(dqo.fn.count().desc).count_by(Something.col1)
+    Something.ALL.order_by(dqo.sql.count.desc).count_by(Something.col1)
     self.assertEqual(self.echo.history, [('select col1,count(1) from something group by col1 order by count(1) desc', [])])
 
   def test_count_by_2_cols(self):
