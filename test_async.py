@@ -70,8 +70,9 @@ class BaseAsync:
   async def test_count_by_order(self):
     await Something.ALL.insert(col1=1)
     await Something.ALL.insert(col1=2)
+    await Something.ALL.insert(col1=2)
     d = await Something.ALL.order_by(dqo.sql.count.desc).count_by(Something.col1)
-    self.assertEqual(list(d.items()), [(2,1),(1,1)])
+    self.assertEqual(list(d.items()), [(2,2),(1,1)])
 
   @async_test
   async def test_count_by_2_cols(self):
