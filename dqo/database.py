@@ -34,9 +34,6 @@ class EchoDatabase(Database):
   def conn(self):  
     return EchoDatabase.Connection(self)
     
-  def __deepcopy__(self, m):
-    return self
-
   
 
 class GenericDialect(object):
@@ -53,7 +50,7 @@ class GenericDialect(object):
     self.lib = None
   
   def __call__(self, version=None, lib=None):
-    self = copy.deepcopy(self)
+    self = copy.copy(self)
     self.version = version or self.version
     if isinstance(lib, types.ModuleType):
       lib = lib.__name__
@@ -73,7 +70,7 @@ class GenericDialect(object):
     else: return '?'
   
   def for_query(self):
-    self = copy.deepcopy(self)
+    self = copy.copy(self)
     self.arg_counter = 0
     return self
   

@@ -24,21 +24,33 @@ class Query(object):
     self._limit = None
     self._order_by = None
     self._group_by = None
+  
+  def __copy__(self):
+    new = Query(self._tbl)
+    new._db_ = self._db_
+    new._cmd = self._cmd
+    new._select = copy.copy(self._select)
+    new._set_values = copy.copy(self._set_values)
+    new._conditions = copy.copy(self._conditions)
+    new._limit = self._limit
+    new._order_by = copy.copy(self._order_by)
+    new._group_by = copy.copy(self._group_by)
+    return new
     
   def __iter__(self):
     if self._select is None:
-      self = copy.deepcopy(self)
+      self = copy. copy(self)
       self._select = self._tbl._columns
     return SyncIterable(self)
   
   def __aiter__(self):
     if self._select is None:
-      self = copy.deepcopy(self)
+      self = copy. copy(self)
       self._select = self._tbl._columns
     return AsyncIterable(self)
   
   def select(self, *columns):
-    self = copy.deepcopy(self)
+    self = copy. copy(self)
     if self._select is None:
       self._select = self._tbl._columns
     existing = set([c._db_name for c in self._select])
@@ -66,7 +78,7 @@ class Query(object):
   
   def where(self, *conditions, **kwargs):
     conditions = list(conditions)
-    self = copy.deepcopy(self)
+    self = copy. copy(self)
     for name, value in kwargs.items():
       conditions.append(getattr(self._tbl, name)==value)
     self._conditions += conditions
@@ -77,19 +89,19 @@ class Query(object):
     pass
     
   def order_by(self, *columns):
-    self = copy.deepcopy(self)
+    self = copy. copy(self)
     self._order_by = columns
     return self
     
   def bind(self, db_or_tx):
-    self = copy.deepcopy(self)
+    self = copy. copy(self)
     self._db_ = db_or_tx
     return self
   
   def first(self):
     self = self.limit(1)
     if self._select is None:	
-      self = copy.deepcopy(self)	
+      self = copy. copy(self)	
       self._select = self._tbl._columns	
     if asyncio.get_running_loop():
       sql, args = self._sql()
@@ -110,7 +122,7 @@ class Query(object):
       return values[0] if len(values) else None
 
   def limit(self, n):
-    self = copy.deepcopy(self)
+    self = copy. copy(self)
     self._limit = n
     return self
 
@@ -118,22 +130,22 @@ class Query(object):
     return self.limit(n)
 
   def set(self, **kwargs):
-    self = copy.deepcopy(self)
+    self = copy. copy(self)
     self._set_values.update(kwargs)
     return self
       
   def delete(self):
-    self = copy.deepcopy(self)
+    self = copy. copy(self)
     self._cmd = CMD.DELETE
     return self._execute()
   
   def count(self):
-    self = copy.deepcopy(self)
+    self = copy. copy(self)
     self._select = [fn.count(literal(1))]
     return self._fetch_scalar()
 
   def count_by(self, *columns):
-    self = copy.deepcopy(self)
+    self = copy. copy(self)
     self._select = list(columns) + [fn.count(literal(1))]
     self._group_by = columns
     return self._fetch_map(len(columns))
@@ -188,12 +200,12 @@ class Query(object):
       return data[0][0] if data and data[0] else None
       
   def update(self):
-    self = copy.deepcopy(self)
+    self = copy. copy(self)
     self._cmd = CMD.UPDATE
     return self._execute()
   
   def insert(self, *instances, **data):
-    self = copy.deepcopy(self)
+    self = copy. copy(self)
     if instances and data: raise ValueError('Please pass in either args or kwargs, not both.')
     if instances:
       if len(instances)==1:

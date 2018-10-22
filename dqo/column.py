@@ -11,9 +11,6 @@ class Comparable:
   def __or__(self, other):
     return Condition('or', [self, other])
 
-  def __deepcopy__(self, m):
-    return self
-
 
 class Column(Comparable):
   
@@ -35,9 +32,6 @@ class Column(Comparable):
   def _sql_(self, d, sql, args):
     sql.write(d.term(self._db_name))
 
-  def __deepcopy__(self, m):
-    return self
-    
   @property
   def asc(self):
     return +self
@@ -94,7 +88,4 @@ class Condition:
 
   def __or__(self, other):
     return Condition('or', [self, other])
-  
-  def __deepcopy__(self, m):
-    return self
-  
+    
