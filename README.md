@@ -1,5 +1,6 @@
-
 ![dqo](docs/logo.png)
+
+[![Documentation Status](https://readthedocs.org/projects/dqo/badge/?version=latest)](https://dqo.readthedocs.io/en/latest/?badge=latest)
 
 Data Query Objects
 ==================
