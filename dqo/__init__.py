@@ -6,7 +6,7 @@ if not hasattr(asyncio, 'get_running_loop'):
     return loop if loop.is_running() else None
   asyncio.get_running_loop = get_running_loop
 
-from .table import Table
+from .table import TableDecorator as Table
 from .column import Column
 from .database import Database, Dialect, EchoDatabase
 from .function import sql

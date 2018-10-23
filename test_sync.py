@@ -3,7 +3,7 @@ import asyncio
 import dqo
 
 
-@dqo.Table
+@dqo.Table()
 class Something:
   col1 = dqo.Column(int)
   col2 = dqo.Column(str)

@@ -40,19 +40,19 @@ class Query(object):
   def __iter__(self):
     if self._select is None:
       self = copy. copy(self)
-      self._select = self._tbl._columns
+      self._select = self._tbl._dqoi_columns
     return SyncIterable(self)
   
   def __aiter__(self):
     if self._select is None:
       self = copy. copy(self)
-      self._select = self._tbl._columns
+      self._select = self._tbl._dqoi_columns
     return AsyncIterable(self)
   
   def select(self, *columns):
     self = copy. copy(self)
     if self._select is None:
-      self._select = self._tbl._columns
+      self._select = self._tbl._dqoi_columns
     existing = set([c._db_name for c in self._select])
     select = []
     unselect = set()
@@ -102,7 +102,7 @@ class Query(object):
     self = self.limit(1)
     if self._select is None:	
       self = copy. copy(self)	
-      self._select = self._tbl._columns	
+      self._select = self._tbl._dqoi_columns	
     if asyncio.get_running_loop():
       sql, args = self._sql()
       keys = [c._name for c in self._select]
@@ -265,7 +265,7 @@ class Query(object):
     sql.write('select ')
     self._gen_select(d, sql, args)
     sql.write(' from ')
-    sql.write(d.term(self._tbl._name))
+    sql.write(d.term(self._tbl._dqoi_db_name))
     self._gen_where(d, sql, args)
     if self._group_by:
       sql.write(' group by ')
@@ -288,7 +288,7 @@ class Query(object):
       
   def _update_sql_(self, d, sql, args):
     sql.write('update ')
-    sql.write(d.term(self._tbl._name))
+    sql.write(d.term(self._tbl._dqoi_db_name))
     sql.write(' set ')
     first = True
     for k,v in self._set_values.items():
@@ -302,7 +302,7 @@ class Query(object):
       
   def _insert_sql_(self, d, sql, args):
     sql.write('insert into ')
-    sql.write(d.term(self._tbl._name))
+    sql.write(d.term(self._tbl._dqoi_db_name))
     sql.write(' (')
     values = []
     first = True
@@ -319,11 +319,11 @@ class Query(object):
       
   def _delete_sql_(self, d, sql, args):
     sql.write('delete from ')
-    sql.write(d.term(self._tbl._name))
+    sql.write(d.term(self._tbl._dqoi_db_name))
     self._gen_where(d, sql, args)
             
   def _gen_select(self, d, sql, args):
-    components = self._tbl._columns if self._select is None else self._select
+    components = self._tbl._dqoi_columns if self._select is None else self._select
     first = True
     for component in components:
       if first: first = None

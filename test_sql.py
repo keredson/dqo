@@ -3,7 +3,7 @@ import asyncio
 
 import dqo
 
-@dqo.Table
+@dqo.Table()
 class Something:
   col1 = dqo.Column(int, primary_key=True)
   col2 = dqo.Column(str)
@@ -94,6 +94,14 @@ class SQL(unittest.TestCase):
     Something.ALL.insert({'col1':1, 'col2':2})
     self.assertEqual(self.echo.history, [('insert into something (col1,col2) values (?,?)', [1, 2])])
 
+  def test_insert3(self):
+    Something(col1=1, col2=2).insert()
+    self.assertEqual(self.echo.history, [('insert into something (col1,col2) values (?,?)', [1, 2])])
+
+  def test_insert4(self):
+    Something(col1=1, col2=2).save()
+    self.assertEqual(self.echo.history, [('insert into something (col1,col2) values (?,?)', [1, 2])])
+
   def test_update(self):
     Something.ALL.set(col1=3, col2=2).where(col1=1).update()
     self.assertEqual(self.echo.history, [('update something set col1=?, col2=? where col1=?', [3,2,1])])
@@ -110,14 +118,12 @@ class SQL(unittest.TestCase):
     self.assertEqual(self.echo.history, [('insert into something (col1) values (?)', [2])])
 
   def test_update_via_save(self):
-    s = Something()
-    s.col1 = 1
-    s.save()
-    s.col2 = 'woot'
+    s = Something(col1=1).insert()
+    s.col2 = 2
     s.save()
     self.assertEqual(self.echo.history, [
       ('insert into something (col1) values (?)', [1]),
-      ('update something set col2=? where col1=?', ['woot', 1]),
+      ('update something set col2=? where col1=?', [2, 1]),
     ])
 
   def test_select_limit(self):
