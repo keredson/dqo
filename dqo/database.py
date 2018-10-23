@@ -23,7 +23,7 @@ class Database(object):
           if self._async_init:
             #await self.src
             import asyncpg
-            pool = await asyncpg.create_pool(database='responder_webapp')
+            pool = await self.src
             self.src = lambda: pool.acquire()
             self._async_init = None
           return await pool.acquire()

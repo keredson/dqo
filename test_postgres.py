@@ -45,12 +45,21 @@ class PostgresAsync(BaseAsync, unittest.TestCase):
 
 class PostgresAsyncPooled(unittest.TestCase):
 
+  @classmethod
+  def setUpClass(cls):
+    os.system('createdb dqo_test')
+    
+  @classmethod
+  def tearDownClass(cls):
+    os.system('dropdb dqo_test')
+
   @async_test
   async def test_first(self):
 
-    dqo.ASYNC_DB = dqo.Database(
-      src=asyncpg.create_pool(database='dqo_test')
-    )
+    pool = asyncpg.create_pool(database='dqo_test')
+    dqo.ASYNC_DB = dqo.Database(src=pool)
+    async with dqo.ASYNC_DB.connection as conn:
+      await conn.async_execute('create table something (col1 integer, col2 text)', [])
 
     @dqo.Table()
     class Something:
@@ -60,6 +69,7 @@ class PostgresAsyncPooled(unittest.TestCase):
     await Something.ALL.insert(col1=1)
     self.assertEqual((await Something.ALL.first()).col1, 1)
 
+    await pool.close()
 
 
 
