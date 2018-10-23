@@ -239,9 +239,9 @@ class Query(object):
     if self._db_: return self._db_
     if self._tbl._db: return self._tbl._db
     if asyncio.get_running_loop():
-      return dqo.DEFAULT_ASYNC_DB
+      return dqo.ASYNC_DB
     else:
-      return dqo.DEFAULT_SYNC_DB
+      return dqo.SYNC_DB
       
   def _sql(self):
     db = self._db

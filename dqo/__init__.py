@@ -11,7 +11,7 @@ from .column import Column
 from .database import Database, Dialect, EchoDatabase
 from .function import sql
 
-DEFAULT_SYNC_DB = None
-DEFAULT_ASYNC_DB = None
+SYNC_DB = None
+ASYNC_DB = None
 
 from .__version__ import __version__

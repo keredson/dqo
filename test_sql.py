@@ -11,7 +11,7 @@ class Something:
 class SQL(unittest.TestCase):
 
   def setUp(self):
-    self.echo = dqo.DEFAULT_SYNC_DB = dqo.EchoDatabase()
+    self.echo = dqo.SYNC_DB = dqo.EchoDatabase()
 
   def test_select_all(self):
     sql, args = Something.ALL._sql()

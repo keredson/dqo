@@ -30,23 +30,22 @@ Connections
 
     .. code-block:: python
 
-        dqo.DEFAULT_SYNC_DB = ...
-        dqo.DEFAULT_ASYNC_DB = ...
+        dqo.SYNC_DB = ...
+        dqo.ASYNC_DB = ...
     
     As the default for a table:
 
     .. code-block:: python
       
-      @dqo.Table
+      @dqo.Table(sync_db=[...], async_db=[...])
       class User:
-        _sync_db = ...
-        _async_db = ...
+        [...]
         
     Or bound to a given query:
     
     .. code-block:: python
     
-      User.ALL.bind(db).first()
+      User.ALL.bind(sync_db=db).first()
 
 
 .. py:class:: Dialect([version=None, lib=None])
@@ -485,8 +484,8 @@ To define a table, add the ``@dqo.Table`` decorator to a class.  Note that it wi
 .. py:decorator:: Table(name=None, sync_db=None, async_db=None, aka=None)
 
   :param name: The name of the table in the database.
-  :param sync_db: The database to use for regular Python code.  If ``None`` defaults to ``dqo.DEFAULT_SYNC_DB``.
-  :param async_db: The database to use for async Python code.  If ``None`` defaults to ``dqo.DEFAULT_ASYNC_DB``.
+  :param sync_db: The database to use for regular Python code.  If ``None`` defaults to ``dqo.SYNC_DB``.
+  :param async_db: The database to use for async Python code.  If ``None`` defaults to ``dqo.ASYNC_DB``.
   :param aka: A string or list of strings with previous names of this table, used for renaming.
 
 .. py:class:: Column(type, [null=True, default=None, index=True, unique=True, primary_key=True, foreign_key=None, aka=None])
