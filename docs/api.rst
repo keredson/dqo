@@ -475,3 +475,55 @@ SQL Functions and Literals
     )
     
   To provide a query-specific default for the user's name.
+  
+  
+Schema Definition
+-----------------
+
+To define a table, add the ``@dqo.Table`` decorator to a class.  Note that it will *replace* your class with another.
+
+.. py:decorator:: Table(name=None, sync_db=None, async_db=None, aka=None)
+
+  :param name: The name of the table in the database.
+  :param sync_db: The database to use for regular Python code.  If ``None`` defaults to ``dqo.DEFAULT_SYNC_DB``.
+  :param async_db: The database to use for async Python code.  If ``None`` defaults to ``dqo.DEFAULT_ASYNC_DB``.
+  :param aka: A string or list of strings with previous names of this table, used for renaming.
+
+.. py:class:: Column(type, [null=True, default=None, index=True, unique=True, primary_key=True, foreign_key=None, aka=None])
+
+  :param type: A Python type to be mapped to a database column type.
+  :param null: If the column can be null or not.
+  :param default: The default for the column.  If a constant, stored in the database, else (like a lambda) will be calculated on object creation.
+  :param index: If a single column index (w/ the database's default type, ie. BTREE) should be created for this column.
+  :param unique: If a single column **UNIQUE** index should be created for this column.
+  :param primary_key: If this column should be the primary key for this table.
+  :param foreign_key: The other column this column should be a foreign_key to.
+  :param aka: A string or list of strings with previous names of this column, used for renaming.
+  
+  You can create ``ARRAY`` columns with subtypes by passing in a list of a single type.  Example:
+
+  .. code-block:: python
+  
+    @dqo.Table
+    class Product:
+      name = dqo.Column(str)
+      keywords = dqo.Column([str])
+      
+
+.. py:class:: Index(*columns, unique=True, using=None)
+
+  :param columns: The columns the index should cover.
+  :param unique: If the index should be a unique index.
+  :param using: The index method to use, ie ``'btree'``, ``'hash'``, ``'gist'``, ``'gin'``, etc.
+
+.. py:class:: PrimaryKey(*columns)
+
+  :param columns: The columns the index should cover.
+
+.. py:class:: ForeignKey(from_columns, to_columns)
+
+  :param from_columns: A list of the columns on this table.
+  :param to_columns: A list of the columns on the other table.
+  
+  The length of ``from_columns`` must match the length of ``to_columns``.
+

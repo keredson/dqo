@@ -14,7 +14,11 @@ Data Query Objects
    :maxdepth: 2
    :caption: Contents:
    
+   quickstart
+   querying
    api
+   schema
+   evolve
 
 
 
