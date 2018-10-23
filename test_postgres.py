@@ -14,7 +14,6 @@ class PostgresSync(BaseSync, unittest.TestCase):
   def setUpClass(cls):
     os.system('createdb dqo_test')
     dqo.SYNC_DB = dqo.Database(
-      dialect=dqo.Dialect.POSTGRES('10', lib=psycopg2), 
       src=lambda: psycopg2.connect("dbname='dqo_test'"),
     )
     with dqo.SYNC_DB.connection as conn:
@@ -31,7 +30,6 @@ class PostgresAsync(BaseAsync, unittest.TestCase):
   def setUpClass(cls):
     os.system('createdb dqo_test')
     dqo.ASYNC_DB = dqo.Database(
-      dialect=dqo.Dialect.POSTGRES('10', lib=asyncpg),
       src=lambda: asyncpg.connect(database='dqo_test')
     )
     @async_test
@@ -45,6 +43,28 @@ class PostgresAsync(BaseAsync, unittest.TestCase):
     os.system('dropdb dqo_test')
 
 
+class PostgresAsyncPooled(unittest.TestCase):
+
+  @async_test
+  async def test_first(self):
+
+    dqo.ASYNC_DB = dqo.Database(
+      src=asyncpg.create_pool(database='dqo_test')
+    )
+
+    @dqo.Table()
+    class Something:
+      col1 = dqo.Column(int)
+      col2 = dqo.Column(str)
+
+    await Something.ALL.insert(col1=1)
+    self.assertEqual((await Something.ALL.first()).col1, 1)
+
+
+
+
 if __name__ == '__main__':
     unittest.main()
+
+
 

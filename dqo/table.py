@@ -1,4 +1,4 @@
-import inspect, re
+import asyncio, inspect, re
 
 from .query import Query
 from .column import Column
@@ -24,10 +24,18 @@ class BaseRow(object):
     else: self.update()
   
   def insert(self):
-    self._tbl.ALL.insert(**self.__dict__)
-    self.__dict__['_new'] = False
-    self.__dict__['_dirty'] = set()
-    return self
+    if asyncio.get_running_loop():
+      async def f():
+        await self._tbl.ALL.insert(**self.__dict__)
+        self.__dict__['_new'] = False
+        self.__dict__['_dirty'] = set()
+        return self
+      return f()
+    else:
+      self._tbl.ALL.insert(**self.__dict__)
+      self.__dict__['_new'] = False
+      self.__dict__['_dirty'] = set()
+      return self
   
   def update(self):
     if not self._tbl._pk: raise Exception("cannot update a row without a primary key")

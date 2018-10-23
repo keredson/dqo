@@ -11,10 +11,10 @@ Connections
 
 .. py:class:: Database(src[, dialect=None])
 
-    :param src: A function returning a database connection.
+    :param src: A function returning a database connection, or a connection pool.
     :param dialect: The database :py:class:`Dilect` to speak (optional).
 
-    The :py:class:`Database` controls connections to your database.  The `src` parameter is required
+    The :py:class:`Database` controls connections to your database.  The `src` parameter is required.  For example:
     
     .. code-block:: python
         
@@ -22,6 +22,22 @@ Connections
           src=lambda: psycopg2.connect("dbname='mydb'"),
         )
         
+    If you're connecting with the async library ``asyncpg``:
+        
+    .. code-block:: python
+        
+        db = dqo.Database(
+          src=lambda: asyncpg.connect(database='mydb')
+        )
+        
+    If you're doing ``asyncpg`` connection pooling:
+    
+    .. code-block:: python
+        
+        db = dqo.Database(
+          src=asyncpg.create_pool(database='mydb')
+        )
+     
     If you don't pass in the `dialect` it will be auto-detected by opening and closing a single connection.
     
     You typically assign a database one of three places...

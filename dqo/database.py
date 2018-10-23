@@ -1,16 +1,71 @@
-import asyncio, copy, enum, io, types
+import asyncio, copy, enum, inspect, io, types
 
 from .connection import Connection
-
     
 class Database(object):
   
   def __init__(self, src, dialect=None):
-    self.dialect = dialect
     self.src = src
+    self.dialect = dialect
+    self._async_init = None
+    self._async_init_lock = asyncio.Lock()
+    if not dialect:
+      self._detect_dialect(src)
+
+  
+  def _detect_dialect(self, src):
+
+    if src.__class__.__module__.startswith('asyncpg') and src.__class__.__name__=='Pool':
+      # this is an asyncpg connection pool
+      self.dialect = Dialect.POSTGRES(lib='asyncpg')
+      async def f():
+        async with self._async_init_lock:
+          if self._async_init:
+            #await self.src
+            import asyncpg
+            pool = await asyncpg.create_pool(database='responder_webapp')
+            self.src = lambda: pool.acquire()
+            self._async_init = None
+          return await pool.acquire()
+      self._async_init = f
+      return
+    
+    conn_or_pool = src()
+    
+    if inspect.iscoroutine(conn_or_pool):
+      event_loop = asyncio.new_event_loop()
+      async def f():
+        conn_or_pool2 = await conn_or_pool
+        if conn_or_pool2.__class__.__module__.startswith('asyncpg'):
+          self.dialect = Dialect.POSTGRES(lib='asyncpg')
+        await conn_or_pool2.close()
+      coro = asyncio.coroutine(f)
+      event_loop.run_until_complete(f())
+      event_loop.close()
+
+    if conn_or_pool.__class__.__module__.startswith('asyncpg'):
+      self.dialect = Dialect.POSTGRES(lib='asyncpg')
+
+    if conn_or_pool.__class__.__module__.startswith('psycopg2'):
+      self.dialect = Dialect.POSTGRES(lib='psycopg2')
+    
+    # did we open a connection?
+    if not inspect.isawaitable(conn_or_pool) and hasattr(conn_or_pool, 'close'):
+      conn_or_pool.close()
+      
+    if not self.dialect:
+      raise Exception('could not detect the database dialect - please open an issue at https://github.com/keredson/dqo')
+    
+  async def _async_init_src(self):
+    async with self._async_init_lock:
+      if self._async_init:
+        await self.src._async__init__()
+        self._async_init = False
+    return self.src
   
   @property
   def connection(self):
+    if self._async_init: return Connection(self, self._async_init)
     return Connection(self, self.src)
   
 
@@ -20,6 +75,7 @@ class EchoDatabase(Database):
     self.dialect = Dialect.GENERIC
     self.src = self.conn
     self.history = []
+    self._async_init = None
   
   class Connection:
     def __init__(self, db):
