@@ -39,14 +39,28 @@ class BaseRow(object):
   
   def update(self):
     if not self._tbl._pk: raise Exception("cannot update a row without a primary key")
-    self._tbl.ALL.set(**{x:self.__dict__.get(x) for x in self._dirty}).where(*[c==self.__dict__.get(c._name) for c in self._tbl._pk]).update()
-    self.__dict__['_dirty'] = set()
+    q = self._tbl.ALL.set(**{x:self.__dict__.get(x) for x in self._dirty}).where(*[c==self.__dict__.get(c._name) for c in self._tbl._pk])
+    if asyncio.get_running_loop():
+      async def f():
+        await q.update()
+        self.__dict__['_dirty'] = set()
+      return f()
+    else:
+      q.update()
+      self.__dict__['_dirty'] = set()
   
   def delete(self):
     if not self._tbl._pk: raise Exception("cannot delete a row without a primary key")
-    self._tbl.ALL.where(*[c==self.__dict__.get(c._name) for c in self._tbl._pk]).delete()
-    self.__dict__['_new'] = True
-    self.__dict__['_dirty'] = set()
+    if asyncio.get_running_loop():
+      async def f():
+        await self._tbl.ALL.where(*[c==self.__dict__.get(c._name) for c in self._tbl._pk]).delete()
+        self.__dict__['_new'] = True
+        self.__dict__['_dirty'] = set()
+      return f()
+    else:
+      self._tbl.ALL.where(*[c==self.__dict__.get(c._name) for c in self._tbl._pk]).delete()
+      self.__dict__['_new'] = True
+      self.__dict__['_dirty'] = set()
   
   def __repr__(self):
     return '<%s %s>' % (self.__class__.__name__, ' '.join(['%s=%s' % (k,repr(v)) for k,v in self.__dict__.items() if not k.startswith('_')]))

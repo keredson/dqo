@@ -17,7 +17,7 @@ def async_test(af):
 
 @dqo.Table()
 class Something:
-  col1 = dqo.Column(int)
+  col1 = dqo.Column(int, primary_key=True)
   col2 = dqo.Column(str)
 
 
@@ -44,6 +44,28 @@ class BaseAsync:
   async def test_first_something(self):
     await Something.ALL.insert(col1=1)
     self.assertEqual((await Something.ALL.first()).col1, 1)
+
+  @async_test
+  async def test_model_insert(self):
+    await Something(col1=1).insert()
+    self.assertEqual(await Something.ALL.count(), 1)
+
+  @async_test
+  async def test_model_delete(self):
+    s = Something(col1=1)
+    await s.insert()
+    self.assertEqual(await Something.ALL.count(), 1)
+    await s.delete()
+    self.assertEqual(await Something.ALL.count(), 0)
+
+  @async_test
+  async def test_model_update(self):
+    s = Something(col1=1)
+    await s.insert()
+    self.assertEqual(await Something.ALL.count(), 1)
+    s.col2 = '2'
+    await s.update()
+    self.assertEqual((await Something.ALL.first()).col2, '2')
 
   @async_test
   async def test_order_by(self):
