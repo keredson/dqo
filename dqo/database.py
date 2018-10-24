@@ -4,10 +4,11 @@ from .connection import Connection
     
 class Database(object):
   
-  def __init__(self, sync_src=None, async_src=None, dialect=None):
+  def __init__(self, sync_src=None, async_src=None, sync_dialect=None, async_dialect=None):
     self.sync_src = sync_src
     self.async_src = async_src
-    self.dialect = dialect
+    self.sync_dialect = sync_dialect
+    self.async_dialect = async_dialect
 
     self._known_tables = []
     self._async_init = None
@@ -23,15 +24,36 @@ class Database(object):
           return await pool.acquire()
       self._async_init = f
 
-    if not dialect:
-      self._detect_dialect(self.sync_src or self.async_src)
+    if sync_src and not sync_dialect:
+      self._detect_sync_dialect(sync_src)
+    if async_src and not async_dialect:
+      self._detect_async_dialect(async_src)
+      
+  @property
+  def dialect(self):
+    if asyncio.get_running_loop(): return self.async_dialect
+    else: return self.sync_dialect
 
   
-  def _detect_dialect(self, src):
+  def _detect_sync_dialect(self, src):
+
+    conn_or_pool = src()
+    
+    if conn_or_pool.__class__.__module__.startswith('psycopg2'):
+      self.sync_dialect = Dialect.POSTGRES(lib='psycopg2')
+    
+    # did we open a connection?
+    if hasattr(conn_or_pool, 'close'):
+      conn_or_pool.close()
+      
+    if not self.sync_dialect:
+      raise Exception('could not detect the sync database dialect - please open an issue at https://github.com/keredson/dqo')
+    
+  def _detect_async_dialect(self, src):
 
     if src.__class__.__module__.startswith('asyncpg') and src.__class__.__name__=='Pool':
       # this is an asyncpg connection pool
-      self.dialect = Dialect.POSTGRES(lib='asyncpg')
+      self.async_dialect = Dialect.POSTGRES(lib='asyncpg')
       async def f():
         async with self._async_init_lock:
           if self._async_init:
@@ -50,24 +72,17 @@ class Database(object):
       async def f():
         conn_or_pool2 = await conn_or_pool
         if conn_or_pool2.__class__.__module__.startswith('asyncpg'):
-          self.dialect = Dialect.POSTGRES(lib='asyncpg')
+          self.async_dialect = Dialect.POSTGRES(lib='asyncpg')
         await conn_or_pool2.close()
       coro = asyncio.coroutine(f)
       event_loop.run_until_complete(f())
       event_loop.close()
 
     if conn_or_pool.__class__.__module__.startswith('asyncpg'):
-      self.dialect = Dialect.POSTGRES(lib='asyncpg')
+      self.async_dialect = Dialect.POSTGRES(lib='asyncpg')
 
-    if conn_or_pool.__class__.__module__.startswith('psycopg2'):
-      self.dialect = Dialect.POSTGRES(lib='psycopg2')
-    
-    # did we open a connection?
-    if not inspect.isawaitable(conn_or_pool) and hasattr(conn_or_pool, 'close'):
-      conn_or_pool.close()
-      
     if not self.dialect:
-      raise Exception('could not detect the database dialect - please open an issue at https://github.com/keredson/dqo')
+      raise Exception('could not detect the async database dialect - please open an issue at https://github.com/keredson/dqo')
     
   def connection(self):
     if self._async_init: return Connection(self, self._async_init)
@@ -79,11 +94,12 @@ class Database(object):
   def transaction(self):
     pass
   
-  def update_schema(self):
-    changes = self.diff_schema()
-    print(changes)
+  def evolve(self):
+    changes = self.diff()
+    with self.connection() as conn:
+      conn.execute_all(changes)
     
-  def diff_schema(self):
+  def diff(self):
     diff = Diff(self)
     changes = diff.diff()
     return changes
@@ -94,7 +110,7 @@ class Database(object):
 class EchoDatabase(Database):
   
   def __init__(self):
-    self.dialect = Dialect.GENERIC
+    self.sync_dialect = Dialect.GENERIC
     self.sync_src = self.conn
     self.history = []
     self._async_init = None

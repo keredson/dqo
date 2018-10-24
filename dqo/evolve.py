@@ -78,6 +78,8 @@ class DiffPostgres(DiffBase):
   }
 
   def python_to_db_type(self, col):
+    if col.kind==int and col.primary_key==True:
+      return 'serial primary key'
     return self.python_to_db_type_map[col.kind]
     
 

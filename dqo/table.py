@@ -26,7 +26,10 @@ class BaseRow(object):
   def insert(self):
     if asyncio.get_running_loop():
       async def f():
-        await self._tbl.ALL.insert(**self.__dict__)
+        pk = await self._tbl.ALL.insert(**self.__dict__)
+        for c,v in zip(self._tbl._pk, pk):
+          self.__dict__[c.name] = v
+          
         self.__dict__['_new'] = False
         self.__dict__['_dirty'] = set()
         return self

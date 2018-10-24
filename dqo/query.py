@@ -204,20 +204,51 @@ class Query(object):
     self._cmd = CMD.UPDATE
     return self._execute()
   
-  def insert(self, *instances, **data):
+  def insert(self, *args, **data):
     self = copy. copy(self)
-    if instances and data: raise ValueError('Please pass in either args or kwargs, not both.')
+    instances = None
+    if args: instances = args[0]
+    if len(args)>1:
+      raise ValueError('please pass in only one argument (a list of instances or dicts)')
+    if instances and data:
+      raise ValueError('please pass in only a list or kwargs, not both')
     if instances:
-      if len(instances)==1:
-        self._cmd = CMD.INSERT
-        self._insert = instances[0]
-      else:
-        self._cmd = CMD.INSERT_MANY
-        self._insert = instances
+      self._cmd = CMD.INSERT_MANY
+      self._insert = instances
     elif data:
       self._cmd = CMD.INSERT
       self._insert = data
-    return self._execute()
+    if self._tbl._pk:
+      sql, args = self._sql()
+      def f(rows):
+        if self._cmd == CMD.INSERT:
+          rows = list(rows)
+          return rows[0] if rows else None
+        else:
+          return rows
+      if asyncio.get_running_loop():
+        if not self._insert and self._cmd == CMD.INSERT_MANY:
+          return self._noop([] if instances else None)
+        return self._async_fetch_f(sql, args, f)
+      else: 
+        if not self._insert and self._cmd == CMD.INSERT_MANY:
+          return [] if instances else None
+        return self._sync_fetch_f(sql, args, f)
+    else:
+      return self._execute()
+
+  async def _noop(self, ret):
+    return ret
+  
+  def _sync_fetch_f(self, sql, args, f):
+    print('sql, args', sql, args)
+    with self._conn_or_tx_sync as conn:
+      return f(conn.sync_fetch(sql, args))
+  
+  async def _async_fetch_f(self, sql, args, f):
+    print('sql, args', sql, args)
+    async with self._conn_or_tx_sync as conn:
+      return f(await conn.async_fetch(sql, args))
   
   def _execute(self):
     sql, args = self._sql()
@@ -313,6 +344,9 @@ class Query(object):
     sql.write(') values (')
     sql.write(','.join(values))
     sql.write(')')
+    if self._tbl._pk:
+      sql.write(' returning ')
+      sql.write(','.join([c.name for c in self._tbl._pk]))
       
   def _delete_sql_(self, d, sql, args):
     sql.write('delete from ')

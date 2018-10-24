@@ -15,13 +15,17 @@ def async_test(af):
   return test_f
 
 
-@dqo.Table()
-class Something:
-  col1 = dqo.Column(int, primary_key=True)
-  col2 = dqo.Column(str)
-
-
 class BaseAsync:
+
+  @classmethod
+  def setUpClass(cls):
+    global Something
+    @dqo.Table(db=cls.db)
+    class Something:
+      id = dqo.Column(int, primary_key=True)
+      col1 = dqo.Column(int)
+      col2 = dqo.Column(str)
+    cls.db.evolve()
 
   @async_test
   async def setUp(self):

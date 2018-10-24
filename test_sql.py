@@ -88,19 +88,19 @@ class SQL(unittest.TestCase):
 
   def test_insert(self):
     Something.ALL.insert(col1=1, col2=2)
-    self.assertEqual(self.echo.history, [('insert into something (col1,col2) values (?,?)', [1, 2])])
+    self.assertEqual(self.echo.history, [('insert into something (col1,col2) values (?,?) returning col1', [1, 2])])
 
   def test_insert2(self):
-    Something.ALL.insert({'col1':1, 'col2':2})
-    self.assertEqual(self.echo.history, [('insert into something (col1,col2) values (?,?)', [1, 2])])
+    Something.ALL.insert(**{'col1':1, 'col2':2})
+    self.assertEqual(self.echo.history, [('insert into something (col1,col2) values (?,?) returning col1', [1, 2])])
 
   def test_insert3(self):
     Something(col1=1, col2=2).insert()
-    self.assertEqual(self.echo.history, [('insert into something (col1,col2) values (?,?)', [1, 2])])
+    self.assertEqual(self.echo.history, [('insert into something (col1,col2) values (?,?) returning col1', [1, 2])])
 
   def test_insert4(self):
     Something(col1=1, col2=2).save()
-    self.assertEqual(self.echo.history, [('insert into something (col1,col2) values (?,?)', [1, 2])])
+    self.assertEqual(self.echo.history, [('insert into something (col1,col2) values (?,?) returning col1', [1, 2])])
 
   def test_update(self):
     Something.ALL.set(col1=3, col2=2).where(col1=1).update()
@@ -115,14 +115,14 @@ class SQL(unittest.TestCase):
     s = Something()
     s.col1 = 2
     s.save()
-    self.assertEqual(self.echo.history, [('insert into something (col1) values (?)', [2])])
+    self.assertEqual(self.echo.history, [('insert into something (col1) values (?) returning col1', [2])])
 
   def test_update_via_save(self):
     s = Something(col1=1).insert()
     s.col2 = 2
     s.save()
     self.assertEqual(self.echo.history, [
-      ('insert into something (col1) values (?)', [1]),
+      ('insert into something (col1) values (?) returning col1', [1]),
       ('update something set col2=? where col1=?', [2, 1]),
     ])
 

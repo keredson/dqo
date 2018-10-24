@@ -3,13 +3,16 @@ import asyncio
 import dqo
 
 
-@dqo.Table()
-class Something:
-  col1 = dqo.Column(int)
-  col2 = dqo.Column(str)
-
-
 class BaseSync:
+
+  @classmethod
+  def setUpClass(cls):
+    global Something
+    @dqo.Table(db=cls.db)
+    class Something:
+      col1 = dqo.Column(int)
+      col2 = dqo.Column(str)
+    cls.db.evolve()
 
   def setUp(self):
     Something.ALL.delete()
