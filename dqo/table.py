@@ -3,7 +3,7 @@ import asyncio, inspect, re
 from .query import Query
 from .column import Column
   
-
+  
 class BaseRow(object):
 
   def __init__(self, **kwargs):
@@ -39,7 +39,7 @@ class BaseRow(object):
   
   def update(self):
     if not self._tbl._pk: raise Exception("cannot update a row without a primary key")
-    q = self._tbl.ALL.set(**{x:self.__dict__.get(x) for x in self._dirty}).where(*[c==self.__dict__.get(c._name) for c in self._tbl._pk])
+    q = self._tbl.ALL.set(**{x:self.__dict__.get(x) for x in self._dirty}).where(*[c==self.__dict__.get(c.name) for c in self._tbl._pk])
     if asyncio.get_running_loop():
       async def f():
         await q.update()
@@ -53,12 +53,12 @@ class BaseRow(object):
     if not self._tbl._pk: raise Exception("cannot delete a row without a primary key")
     if asyncio.get_running_loop():
       async def f():
-        await self._tbl.ALL.where(*[c==self.__dict__.get(c._name) for c in self._tbl._pk]).delete()
+        await self._tbl.ALL.where(*[c==self.__dict__.get(c.name) for c in self._tbl._pk]).delete()
         self.__dict__['_new'] = True
         self.__dict__['_dirty'] = set()
       return f()
     else:
-      self._tbl.ALL.where(*[c==self.__dict__.get(c._name) for c in self._tbl._pk]).delete()
+      self._tbl.ALL.where(*[c==self.__dict__.get(c.name) for c in self._tbl._pk]).delete()
       self.__dict__['_new'] = True
       self.__dict__['_dirty'] = set()
   
@@ -66,13 +66,17 @@ class BaseRow(object):
     return '<%s %s>' % (self.__class__.__name__, ' '.join(['%s=%s' % (k,repr(v)) for k,v in self.__dict__.items() if not k.startswith('_')]))
 
 
-def TableDecorator():
-  def f(cls, name=None, sync_db=None, async_db=None):
-    return build_table(cls, name=name, sync_db=sync_db, async_db=async_db)
+def TableDecorator(name=None, db=None, aka=None):
+  def f(cls):
+    return build_table(cls, name=name, db=db, aka=aka)
   return f
 
   
-def build_table(cls, name=None, sync_db=None, async_db=None):
+def build_table(cls, name=None, db=None, aka=None):
+
+  if aka is None: aka = set()
+  elif isinstance(aka,str): aka = set([aka])
+  else: aka = set(aka)
 
   Table = cls
 
@@ -87,14 +91,20 @@ def build_table(cls, name=None, sync_db=None, async_db=None):
     _tbl = Table
   
   Table._dqoi_db_name = cc_to_snake(cls.__name__)
+  Table._dqoi_db = db
   Table._dqoi_columns = get_columns(cls)
+  Table._dqoi_aka = aka
+  
   Table.ALL = Query(Table)
   Table.__name__ = cls.__name__
   Row.__name__ = cls.__name__
-  for col in Table._dqoi_columns:
-    setattr(Table, col._name, col)
+  
+  #for col in Table._dqoi_columns:
+  #  setattr(Table, col._name, col)
   Table._pk = tuple([c for c in Table._dqoi_columns if c.primary_key])
-  Table._db = cls._db if hasattr(cls, '_db') else None
+  
+  if db:
+    db._known_tables.append(Table)
   
   return Table
 

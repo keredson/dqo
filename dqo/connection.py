@@ -1,6 +1,7 @@
 import threading
 
 TLS = threading.local()
+TLS.conn = None
 
 class Connection(object):
   
@@ -25,20 +26,25 @@ class Connection(object):
 
   def __enter__(self):
     if self._raw_conn: return OpenConnection(self._raw_conn)
+    if TLS.conn: return OpenConnection(TLS.conn)
     self._raw_conn = self._get_raw_conn()
     if hasattr(self._raw_conn, 'autocommit'): self._raw_conn.autocommit = True
-    TLS.conn_or_tx = self
+    TLS.conn = self._raw_conn
     return self
 
   def __exit__(self, exc_type, exc, tb):
     if self._raw_conn:
       self._raw_conn.close()
-    TLS.conn_or_tx = None
+    TLS.conn = None
     
   def sync_execute(self, sql, args):
     cur = self._raw_conn.cursor()
     cur.execute(sql, args)
     return
+    
+  def execute_all(self, cmds):
+    for sql, args in cmds:
+      self.sync_execute(sql, args)
       
   def sync_fetch(self, sql, args):
     cur = self._raw_conn.cursor()

@@ -4,13 +4,27 @@ from .connection import Connection
     
 class Database(object):
   
-  def __init__(self, src, dialect=None):
-    self.src = src
+  def __init__(self, sync_src=None, async_src=None, dialect=None):
+    self.sync_src = sync_src
+    self.async_src = async_src
     self.dialect = dialect
+
+    self._known_tables = []
     self._async_init = None
     self._async_init_lock = asyncio.Lock()
+    
+    if async_src.__class__.__module__.startswith('asyncpg') and async_src.__class__.__name__=='Pool':
+      async def f():
+        async with self._async_init_lock:
+          if self._async_init:
+            pool = await self.async_src
+            self.async_src = lambda: pool.acquire()
+            self._async_init = None
+          return await pool.acquire()
+      self._async_init = f
+
     if not dialect:
-      self._detect_dialect(src)
+      self._detect_dialect(self.sync_src or self.async_src)
 
   
   def _detect_dialect(self, src):
@@ -22,8 +36,7 @@ class Database(object):
         async with self._async_init_lock:
           if self._async_init:
             #await self.src
-            import asyncpg
-            pool = await self.src
+            pool = await self.async_src
             self.src = lambda: pool.acquire()
             self._async_init = None
           return await pool.acquire()
@@ -56,24 +69,33 @@ class Database(object):
     if not self.dialect:
       raise Exception('could not detect the database dialect - please open an issue at https://github.com/keredson/dqo')
     
-  async def _async_init_src(self):
-    async with self._async_init_lock:
-      if self._async_init:
-        await self.src._async__init__()
-        self._async_init = False
-    return self.src
-  
-  @property
   def connection(self):
     if self._async_init: return Connection(self, self._async_init)
-    return Connection(self, self.src)
+    if asyncio.get_running_loop():
+      return Connection(self, self.async_src)
+    else: 
+      return Connection(self, self.sync_src)
+    
+  def transaction(self):
+    pass
+  
+  def update_schema(self):
+    changes = self.diff_schema()
+    print(changes)
+    
+  def diff_schema(self):
+    diff = Diff(self)
+    changes = diff.diff()
+    return changes
+  
+  
   
 
 class EchoDatabase(Database):
   
   def __init__(self):
     self.dialect = Dialect.GENERIC
-    self.src = self.conn
+    self.sync_src = self.conn
     self.history = []
     self._async_init = None
   
@@ -112,6 +134,10 @@ class GenericDialect(object):
       lib = lib.__name__
     self.lib = lib or self.lib
     return self
+    
+  def __eq__(self, other):
+    same_class = self.__class__ == other.__class__
+    return same_class
   
   def term(self, s):
     s = s.lower().replace('"','')
@@ -178,4 +204,6 @@ class Dialect(object):
   GENERIC = GenericDialect()
   POSTGRES = PostgresDialect()
   
+
+from .evolve import Diff
 

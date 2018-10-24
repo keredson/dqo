@@ -29,14 +29,17 @@ class Comparable:
 
 class Column(Comparable):
   
-  def __init__(self, kind, primary_key=False, default=None):
+  def __init__(self, kind, name=None, null=True, primary_key=False, default=None):
     self.kind = kind
     self.primary_key = primary_key
     self.default = default
+    self.null = null
+    self.name = name
     
   def _set_name(self, name):
-    self._name = name
-    self._db_name = name
+    #self._name = name
+    if not self.name:
+      self.name = name
   
   def __pos__(self):
     return PosColumn(self)
@@ -45,7 +48,7 @@ class Column(Comparable):
     return NegColumn(self)
 
   def _sql_(self, d, sql, args):
-    sql.write(d.term(self._db_name))
+    sql.write(d.term(self.name))
 
   @property
   def asc(self):

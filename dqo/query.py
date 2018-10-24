@@ -53,7 +53,7 @@ class Query(object):
     self = copy. copy(self)
     if self._select is None:
       self._select = self._tbl._dqoi_columns
-    existing = set([c._db_name for c in self._select])
+    existing = set([c.name for c in self._select])
     select = []
     unselect = set()
     alsoselect = []
@@ -63,15 +63,15 @@ class Query(object):
       elif isinstance(x, PosColumn):
         alsoselect.append(x.column)
       elif isinstance(x, NegColumn):
-        unselect.add(x.column._db_name)
+        unselect.add(x.column.name)
       else:
         raise ValueError('unknown type %s' % s)
     if select and (unselect or alsoselect):
       raise ValueError('You must either select a set of columns (MyTable.col) or a set of selection modifiers (+MyTable.col / -MyTable.col), you cannot mix the two.')
     if unselect:
-      self._select = [c for c in self._select if c._db_name not in unselect]
+      self._select = [c for c in self._select if c.name not in unselect]
     elif alsoselect:
-      self._select += [c for c in alsoselect if c._db_name not in existing]
+      self._select += [c for c in alsoselect if c.name not in existing]
     else:
       self._select = select
     return self
@@ -105,9 +105,9 @@ class Query(object):
       self._select = self._tbl._dqoi_columns	
     if asyncio.get_running_loop():
       sql, args = self._sql()
-      keys = [c._name for c in self._select]
+      keys = [c.name for c in self._select]
       async def f():
-        async with self._db.connection as conn:
+        async with self._db.connection() as conn:
           data = await conn.async_fetch(sql, args)
           if data:
             row = data[0]
@@ -161,12 +161,12 @@ class Query(object):
   def _conn_or_tx_sync(self):
     conn_or_tx = TLS.conn_or_tx if hasattr(TLS,'conn_or_tx') else None
     if not conn_or_tx:
-      conn_or_tx = self._db.connection
+      conn_or_tx = self._db.connection()
     return conn_or_tx
 
   @property
   def _conn_or_tx_async(self):
-    return self._db.connection
+    return self._db.connection()
 
   def _sync_fetch_map(self, sql, args, len_keys):
     with self._conn_or_tx_sync as conn:
@@ -237,11 +237,8 @@ class Query(object):
   @property
   def _db(self):
     if self._db_: return self._db_
-    if self._tbl._db: return self._tbl._db
-    if asyncio.get_running_loop():
-      return dqo.ASYNC_DB
-    else:
-      return dqo.SYNC_DB
+    if self._tbl._dqoi_db: return self._tbl._dqoi_db
+    return dqo.DB
       
   def _sql(self):
     db = self._db
@@ -346,12 +343,12 @@ class AsyncIterable:
   def __init__(self, query):
     self.query = query
     sql, args = query._sql()
-    self.keys = [c._name for c in query._select]
+    self.keys = [c.name for c in query._select]
     self._inited = False
   
   async def _init(self):
     sql, args = self.query._sql()
-    async with self.query._db.connection as conn:
+    async with self.query._db.connection() as conn:
       data = await conn.async_fetch(sql, args)
       async def f():
         for x in data:
@@ -376,12 +373,12 @@ class SyncIterable:
   def __init__(self, query):
     self.query = query
     sql, args = query._sql()
-    self.keys = [c._name for c in query._select]
+    self.keys = [c.name for c in query._select]
     conn_or_tx = TLS.conn_or_tx if hasattr(TLS,'conn_or_tx') else None
     if conn_or_tx:
       self.iter = conn_or_tx.sync_fetch(sql, args).__iter__()
     else:
-      with query._db.connection as conn:
+      with query._db.connection() as conn:
         self.iter = list(conn.sync_fetch(sql, args)).__iter__()
 
   def __next__(self):

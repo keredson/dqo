@@ -7,16 +7,17 @@ import dqo
 
 from test_sync import BaseSync
 from test_async import BaseAsync, async_test
+from test_evolve import BaseEvolve
 
 class PostgresSync(BaseSync, unittest.TestCase):
 
   @classmethod
   def setUpClass(cls):
     os.system('createdb dqo_test')
-    dqo.SYNC_DB = dqo.Database(
-      src=lambda: psycopg2.connect("dbname='dqo_test'"),
+    dqo.DB = dqo.Database(
+      sync_src=lambda: psycopg2.connect("dbname='dqo_test'"),
     )
-    with dqo.SYNC_DB.connection as conn:
+    with dqo.DB.connection() as conn:
       conn.sync_execute('create table something (col1 integer, col2 text)', [])
     
   @classmethod
@@ -29,12 +30,12 @@ class PostgresAsync(BaseAsync, unittest.TestCase):
   @classmethod
   def setUpClass(cls):
     os.system('createdb dqo_test')
-    dqo.ASYNC_DB = dqo.Database(
-      src=lambda: asyncpg.connect(database='dqo_test')
+    dqo.DB = dqo.Database(
+      async_src=lambda: asyncpg.connect(database='dqo_test')
     )
     @async_test
     async def f(self):
-      async with dqo.ASYNC_DB.connection as conn:
+      async with dqo.DB.connection() as conn:
         await conn.async_execute('create table something (col1 integer, col2 text)', [])
     f(None)
     
@@ -57,8 +58,8 @@ class PostgresAsyncPooled(unittest.TestCase):
   async def test_first(self):
 
     pool = asyncpg.create_pool(database='dqo_test')
-    dqo.ASYNC_DB = dqo.Database(src=pool)
-    async with dqo.ASYNC_DB.connection as conn:
+    dqo.DB = dqo.Database(async_src=pool, dialect=dqo.Dialect.POSTGRES(10, lib=asyncpg))
+    async with dqo.DB.connection() as conn:
       await conn.async_execute('create table something (col1 integer, col2 text)', [])
 
     @dqo.Table()
@@ -71,6 +72,20 @@ class PostgresAsyncPooled(unittest.TestCase):
 
     await pool.close()
 
+
+class PostgresEvolve(BaseEvolve, unittest.TestCase):
+
+  def setUp(self):
+    os.system('createdb dqo_test')
+    super().setUp()
+    
+  def tearDown(self):
+    os.system('dropdb dqo_test')
+  
+  def build_db(self):
+    return dqo.Database(
+      sync_src=lambda: psycopg2.connect("dbname='dqo_test'"),
+    )
 
 
 if __name__ == '__main__':

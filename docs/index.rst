@@ -16,9 +16,9 @@ Data Query Objects
    
    quickstart
    querying
-   api
    schema
    evolve
+   api
 
 
 

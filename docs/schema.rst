@@ -1,5 +1,5 @@
-Schema Definition
------------------
+Tables and Columns
+------------------
 
 We use schema definition syntax simlar to other modern close-to-the-SQL ORMs.  A class represents a table, an
 attribute represents a column, etc.  Let's look at an example:

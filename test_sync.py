@@ -82,5 +82,3 @@ class BaseSync:
     self.assertEqual(Something.ALL.count_by(Something.col1, Something.col2), {(1,None):1,(2,None):1})
     
 
-
-
