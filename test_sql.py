@@ -8,6 +8,11 @@ class Something:
   col1 = dqo.Column(int, primary_key=True)
   col2 = dqo.Column(str)
 
+@dqo.Table()
+class Something2:
+  id = dqo.Column(int, primary_key=True)
+  col1 = dqo.Column(int, name='col2')
+
 class SQL(unittest.TestCase):
 
   def setUp(self):
@@ -202,6 +207,22 @@ class SQL(unittest.TestCase):
   def test_select_where_lte(self):
     sql = Something.ALL.where(Something.col1 <= 2)._sql()
     self.assertEqual(sql, ('select col1,col2 from something where col1<=?', [2]))
+
+  def test_insert_col_diff_name(self):
+    Something2.ALL.insert(col1=1)
+    self.assertEqual(self.echo.history, [('insert into something2 (col2) values (?) returning id', [1])])
+
+  def test_insert_bad_col(self):
+    with self.assertRaises(Exception):
+      Something2.ALL.insert(colX=1)
+
+  def test_where_col_diff_name(self):
+    sql = Something2.ALL.where(col1=1)._sql()
+    self.assertEqual(sql, ('select id,col2 from something2 where col2=?', [1]))
+
+  def test_order_by_col_diff_name(self):
+    sql = Something2.ALL.order_by(Something2.col1)._sql()
+    self.assertEqual(sql, ('select id,col2 from something2 order by col2', []))
 
 
 

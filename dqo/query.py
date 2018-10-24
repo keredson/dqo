@@ -105,7 +105,7 @@ class Query(object):
       self._select = self._tbl._dqoi_columns	
     if asyncio.get_running_loop():
       sql, args = self._sql()
-      keys = [c.name for c in self._select]
+      keys = [c._name for c in self._select]
       async def f():
         async with self._db.connection() as conn:
           data = await conn.async_fetch(sql, args)
@@ -241,12 +241,10 @@ class Query(object):
     return ret
   
   def _sync_fetch_f(self, sql, args, f):
-    print('sql, args', sql, args)
     with self._conn_or_tx_sync as conn:
       return f(conn.sync_fetch(sql, args))
   
   async def _async_fetch_f(self, sql, args, f):
-    print('sql, args', sql, args)
     async with self._conn_or_tx_sync as conn:
       return f(await conn.async_fetch(sql, args))
   
@@ -336,9 +334,10 @@ class Query(object):
     first = True
     for k,v in self._insert.items():
       if k.startswith('_'): continue
+      column = self._tbl._dqoi_columns_by_attr_name[k]
       if first: first = False
       else: sql.write(',')
-      sql.write(d.term(k))
+      sql.write(d.term(column.name))
       args.append(v)
       values.append(d.arg)
     sql.write(') values (')
@@ -407,7 +406,7 @@ class SyncIterable:
   def __init__(self, query):
     self.query = query
     sql, args = query._sql()
-    self.keys = [c.name for c in query._select]
+    self.keys = [c._name for c in query._select]
     conn_or_tx = TLS.conn_or_tx if hasattr(TLS,'conn_or_tx') else None
     if conn_or_tx:
       self.iter = conn_or_tx.sync_fetch(sql, args).__iter__()

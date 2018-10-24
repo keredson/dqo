@@ -34,5 +34,12 @@ class BaseEvolve:
     changes = self.after.diff()
     self.assertEqualsAndWorks(changes, [('create table something (col1 serial primary key)', [])])
 
+  def test_col_different_name(self):
+    @dqo.Table(db=self.after)
+    class Something:
+      col1 = dqo.Column(int, name='col2')
+    changes = self.after.diff()
+    self.assertEqualsAndWorks(changes, [('create table something (col2 integer)', [])])
+
 
 

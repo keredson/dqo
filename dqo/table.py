@@ -96,6 +96,7 @@ def build_table(cls, name=None, db=None, aka=None):
   Table._dqoi_db_name = cc_to_snake(cls.__name__)
   Table._dqoi_db = db
   Table._dqoi_columns = get_columns(cls)
+  Table._dqoi_columns_by_attr_name = {c._name:c for c in Table._dqoi_columns}
   Table._dqoi_aka = aka
   
   Table.ALL = Query(Table)
@@ -114,7 +115,8 @@ def build_table(cls, name=None, db=None, aka=None):
 
 def get_columns(cls):
   ret = []
-  for name, value in inspect.getmembers(cls):
+  for name, value in cls.__dict__.items():
+    if name.startswith('__'): continue 
     if not isinstance(value, Column): continue
     value._set_name(name)
     ret.append(value)

@@ -37,7 +37,7 @@ class Column(Comparable):
     self.name = name
     
   def _set_name(self, name):
-    #self._name = name
+    self._name = name
     if not self.name:
       self.name = name
   

@@ -12,6 +12,7 @@ class BaseSync:
     class Something:
       col1 = dqo.Column(int)
       col2 = dqo.Column(str)
+      col3 = dqo.Column(int, name='col4')
     cls.db.evolve()
 
   def setUp(self):
@@ -45,6 +46,12 @@ class BaseSync:
     Something.ALL.insert(col1=1)
     self.assertEqual(Something.ALL.first().col1, 1)
 
+  def test_first_col_diff_name(self):
+    Something.ALL.insert(col3=4)
+    o = Something.ALL.first()
+    self.assertEqual(o.col3, 4)
+    self.assertEqual(repr(o), '<Something col1=None col2=None col3=4>')
+
   def test_instance_class_name(self):
     Something.ALL.insert(col1=1)
     o = Something.ALL.first()
@@ -53,7 +60,7 @@ class BaseSync:
   def test_instance_repr(self):
     Something.ALL.insert(col1=1)
     o = Something.ALL.first()
-    self.assertEqual(repr(o), '<Something col1=1 col2=None>')
+    self.assertEqual(repr(o), '<Something col1=1 col2=None col3=None>')
     
   def test_order_by(self):
     Something.ALL.insert(col1=1)
