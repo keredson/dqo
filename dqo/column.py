@@ -1,3 +1,4 @@
+import datetime
 
 
 class Comparable:
@@ -29,12 +30,15 @@ class Comparable:
 
 class Column(Comparable):
   
-  def __init__(self, kind, name=None, null=True, primary_key=False, default=None):
+  def __init__(self, kind, name=None, null=True, primary_key=False, default=None, tz=None):
     self.kind = kind
     self.primary_key = primary_key
     self.default = default
     self.null = null
     self.name = name
+    self.tz = tz
+    if tz is not None and kind not in (datetime.datetime,):
+      raise ValueError('tz only allowed for datetime columns')
     
   def _set_name(self, name):
     self._name = name

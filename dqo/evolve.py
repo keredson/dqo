@@ -1,4 +1,4 @@
-import datetime
+import datetime, io
 
 from .database import Dialect
 
@@ -49,6 +49,14 @@ class DiffBase:
   def column_def(self, d, col, args):
     parts = [d.term(col.name), self.python_to_db_type(col)]
     if not col.null: parts.append('not null')
+    if col.default:
+      if hasattr(col.default,'_sql_'):
+        sql = io.StringIO()
+        col.default._sql_(d, sql, args)
+        parts.append('default '+ sql.getvalue())
+      else:
+        parts.append('default '+ d.arg)
+        args.append(col.default)
     return ' '.join(parts)
     
   def diff(self, ignore_tables = []):
@@ -74,13 +82,23 @@ class DiffPostgres(DiffBase):
     int: 'integer',
     float: 'real',
     datetime.date: 'date',
-    datetime.datetime: 'datetime',
+    datetime.datetime: 'timestamp',
   }
 
   def python_to_db_type(self, col):
     if col.kind==int and col.primary_key==True:
       return 'serial primary key'
-    return self.python_to_db_type_map[col.kind]
+    is_array_type = False
+    kind = col.kind
+    if isinstance(kind, list):
+      is_array_type = True
+      kind = kind[0]
+    db_type = self.python_to_db_type_map[kind]
+    if col.tz:
+      db_type += ' with time zone'
+    if is_array_type:
+      db_type += '[]'
+    return db_type
     
 
 
