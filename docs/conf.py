@@ -42,7 +42,12 @@ extensions = [
     'sphinx.ext.doctest',
     'sphinx.ext.coverage',
     'sphinx.ext.imgmath',
+    'sphinx.ext.autodoc',
+    'sphinx.ext.todo',
 ]
+
+import os, sys
+sys.path.insert(0, os.path.abspath('..'))
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -186,3 +191,4 @@ epub_exclude_files = ['search.html']
 def setup(app):
     app.add_stylesheet('custom.css')
 
+todo_include_todos = True

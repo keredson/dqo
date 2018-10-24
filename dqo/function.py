@@ -55,10 +55,75 @@ class FunctionGenerator:
     if fn_name.lower()=='count': return CountFunction(fn_name)
     return Function(fn_name)
 
-  def __call__(self, arg):
-    return Function(str(arg))
+  def __call__(self, literal):
+    return Function(str(literal))
 
     
 sql = FunctionGenerator()
+'''
+  ``dqo.sql`` is a special object that generates functions and other SQL literals for use in your queries.
+  Literals are inserted verbatim into the expressed SQL, so **make sure you never use untrusted data!**
+  
+  *Code here assumes you've:* ``from dqo import sql``
+  
+  For example, while:
+  
+  .. code-block:: python
+    
+    User.name == 'John'
+  
+  would generate:
+  
+  .. code-block:: sql
+    
+    name = ?
+    
+  and ``'John'`` would be passed in as an argument to your database library, this:
+
+  .. code-block:: python
+    
+    User.name == sql.JOHN
+      
+  would generate:
+  
+  .. code-block:: sql
+    
+    name = JOHN
+
+  which probably would not make sense to your database.  A more likely example:
+    
+  .. code-block:: python
+    
+    User.name == sql.CONCAT(
+      User.first_name, ' ', User.last_name
+    )
+      
+  would generate:
+  
+  .. code-block:: sql
+    
+    name = CONCAT(first_name, ' ', last_name)
+      
+  If your literal isn't a valid Python identifier, pass it in as a parameter:
+
+  .. code-block:: python
+
+    # generates COUNT(*)
+    sql.COUNT(sql('*'))
+    
+  The above illistrates the syntax, but is actually unecessary for ``COUNT()``, which has special checks 
+  for ``sql.count('*')`` and ``sql.count(1)`` since they're such common calls.
+  
+  A common operation on a query might be:
+  
+  .. code-block:: python
+
+    # TODO
+    User.ALL.select(
+      +sql.COALESCE(User.name, 'Unknown').as(User.name)
+    )
+    
+  To provide a query-specific default for the user's name.
+'''
 
 

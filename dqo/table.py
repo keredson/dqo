@@ -70,6 +70,11 @@ class BaseRow(object):
 
 
 def TableDecorator(name=None, db=None, aka=None):
+  '''
+  :param name: The name of the table in the database.
+  :param db: The database to use for regular Python code.  If ``None`` defaults to ``dqo.DB`` if defined.
+  :param aka: A string or list of strings with previous names of this table, used for renaming.
+  '''
   def f(cls):
     return build_table(cls, name=name, db=db, aka=aka)
   return f

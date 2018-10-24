@@ -3,6 +3,59 @@ import asyncio, copy, enum, inspect, io, types
 from .connection import Connection
     
 class Database(object):
+  '''
+    :param src: A function returning a database connection, or a connection pool.
+    :param dialect: The database :py:class:`Dilect` to speak (optional).
+
+    The :py:class:`Database` controls connections to your database.  The `src` parameter is required.  For example:
+    
+    .. code-block:: python
+        
+        db = dqo.Database(
+          src=lambda: psycopg2.connect("dbname='mydb'"),
+        )
+        
+    If you're connecting with the async library ``asyncpg``:
+        
+    .. code-block:: python
+        
+        db = dqo.Database(
+          src=lambda: asyncpg.connect(database='mydb')
+        )
+        
+    If you're doing ``asyncpg`` connection pooling:
+    
+    .. code-block:: python
+        
+        db = dqo.Database(
+          src=asyncpg.create_pool(database='mydb')
+        )
+     
+    If you don't pass in the `dialect` it will be auto-detected by opening and closing a single connection.
+    
+    You typically assign a database one of three places...
+    
+    To either (or both) of the global default databases:
+
+    .. code-block:: python
+
+        dqo.SYNC_DB = ...
+        dqo.ASYNC_DB = ...
+    
+    As the default for a table:
+
+    .. code-block:: python
+      
+      @dqo.Table(sync_db=[...], async_db=[...])
+      class User:
+        [...]
+        
+    Or bound to a given query:
+    
+    .. code-block:: python
+    
+      User.ALL.bind(sync_db=db).first()
+  '''
   
   def __init__(self, sync_src=None, async_src=None, sync_dialect=None, async_dialect=None):
     self.sync_src = sync_src
@@ -31,6 +84,9 @@ class Database(object):
       
   @property
   def dialect(self):
+    '''
+      This property returns the dialect associated with this database. (It auto-switches between sync and async depending on context.)
+    '''
     if asyncio.get_running_loop(): return self.async_dialect
     else: return self.sync_dialect
 
@@ -217,6 +273,20 @@ class PostgresDialect(GenericDialect):
     
     
 class Dialect(object):
+  '''
+    :param version: The database version.  Example: `10`, `'9.2.6'`, etc.
+    :param lib: The library used.  Example: `psycopg2`, `asyncpg`, etc.
+
+    All parameters are optional, even calling it as function is optional.  Examples:
+
+    .. code-block:: python
+    
+        dqo.Dialect.POSTGRES
+        dqo.Dialect.POSTGRES(10)
+        dqo.Dialect.POSTGRES(version='9.2.6')
+        dqo.Dialect.POSTGRES(lib='psycopg2')
+        dqo.Dialect.POSTGRES(10, lib=asyncpg)
+  '''
   GENERIC = GenericDialect()
   POSTGRES = PostgresDialect()
   

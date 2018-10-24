@@ -29,6 +29,27 @@ class Comparable:
 
 
 class Column(Comparable):
+  '''
+  :param kind: A Python type to be mapped to a database column type.  Or a single-element list (containing a type) representing an array column.
+  :param name: The database name of the column.
+  :param null: If the column can be null or not.
+  :param default: The default for the column.  If a constant, stored in the database, else (like a lambda) will be calculated on object creation.
+  :param index: If a single column index (w/ the database's default type, ie. BTREE) should be created for this column.
+  :param unique: If a single column **UNIQUE** index should be created for this column.
+  :param primary_key: If this column should be the primary key for this table.
+  :param foreign_key: The other column this column should be a foreign_key to.
+  :param aka: A string or list of strings with previous names of this column, used for renaming.
+  :param tz: If a datatime column, can specify if it's a timezone aware column.
+  
+  You can create ``ARRAY`` columns with subtypes by passing in a list of a single type.  Example:
+
+  .. code-block:: python
+  
+    @dqo.Table
+    class Product:
+      name = dqo.Column(str)
+      keywords = dqo.Column([str])
+  '''
   
   def __init__(self, kind, name=None, null=True, primary_key=False, default=None, tz=None):
     self.kind = kind
