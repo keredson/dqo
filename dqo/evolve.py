@@ -57,7 +57,7 @@ class DiffBase:
   def add_fks(self, table):
     d = self.dialect.for_query()
     args = []
-    fk_defs = [self.fk_def(d, fk, args) for fk in table._dqoi_fks]
+    fk_defs = [self.fk_def(d, fk, args) for fk in table._dqoi_fks if not fk.fake]
     return [('alter table %s add %s' % (d.term(table._dqoi_db_name), fk_def),[]) for fk_def in fk_defs]
   
   def column_def(self, d, col, args):

@@ -33,6 +33,9 @@ def allow_tz(kind):
 
 class ForeignKey:
   '''
+  :param to_columns: The columns this foreign key refers to.
+  :param fake: A "fake" foreign key will give you the syntax sugar without actually creating the restriction in the database.  This is sometimes important for performance reasons.
+
   Defines a foreign key relationship from this table to another.  For example:
 
   .. code-block:: python
@@ -60,12 +63,14 @@ class ForeignKey:
 
   .. code-block:: sql
 
-      alter table b add foreign key (my_a_part1,my_a_part2) references a (part1,part2)
+      alter table b add foreign key (my_a_part1,my_a_part2)
+      references a (part1,part2)
     '''
 
-  def __init__(self, *to_columns):
+  def __init__(self, *to_columns, fake=False):
     self.to = to_columns
     self._name = None
+    self.fake = fake
 
   def _gen_columns(self):
     self.frm = []

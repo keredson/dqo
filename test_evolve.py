@@ -78,7 +78,6 @@ class BaseEvolve:
       part2 = dqo.Column(int)
       _pk = dqo.PrimaryKey(part1, part2)
     changes = self.after.diff()
-    print('changes', changes)
     self.assertEqualAndWorks(changes,  [
       ('create table "a" (part1 integer not null, part2 integer not null, primary key (part1,part2))', [])
     ])
@@ -118,6 +117,20 @@ class BaseEvolve:
       ('alter table b add foreign key (a_id) references a ("id")', []),
     ])
 
+  def test_fake_fk(self):
+    @dqo.Table(db=self.after)
+    class A:
+      id = dqo.Column(int, primary_key=True)
+    @dqo.Table(db=self.after)
+    class B:
+      id = dqo.Column(int, primary_key=True)
+      a = dqo.ForeignKey(A.id, fake=True)
+    changes = self.after.diff()
+    self.assertEqualAndWorks(changes, [
+      ('create table "a" ("id" serial not null, primary key ("id"))', []),
+      ('create table b ("id" serial not null, a_id integer not null, primary key ("id"))', []),
+    ])
+
   def test_double_fks(self):
     @dqo.Table(db=self.after)
     class A:
@@ -145,7 +158,6 @@ class BaseEvolve:
     class B:
       a = dqo.ForeignKey(A.part1, A.part2)
     changes = self.after.diff()
-    print(changes)
     self.assertEqualAndWorks(changes, [
       ('create table "a" (part1 integer not null, part2 integer not null, primary key (part1,part2))', []), 
       ('create table b (a_part1 integer not null, a_part2 integer not null)', []), 
