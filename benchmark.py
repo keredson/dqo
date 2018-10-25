@@ -8,7 +8,7 @@ fake_db = dqo.EchoDatabase()
 os.system('createdb dqo_test')
 real_db = dqo.Database(sync_src=lambda: psycopg2.connect("dbname='dqo_test'"))
 
-pool = psycopg2.pool.SimpleConnectionPool(1, 2, database = 'dqo_test')
+pool = psycopg2.pool.PersistentConnectionPool(1, 2, database = 'dqo_test')
 pooled_db = dqo.Database(sync_src=pool)
 
 @dqo.Table(db=real_db)
