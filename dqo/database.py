@@ -77,10 +77,14 @@ class Database(object):
           return await pool.acquire()
       self._async_init = f
 
+    if sync_src.__class__.__module__.startswith('psycopg2') and 'Pool' in sync_src.__class__.__name__:
+      self.sync_src = self._fix_psycopg2_connection_pool(sync_src)
+      self.sync_dialect = Dialect.POSTGRES(lib='psycopg2')
+
     if sync_src and not sync_dialect:
-      self._detect_sync_dialect(sync_src)
+      self._detect_sync_dialect(self.sync_src)
     if async_src and not async_dialect:
-      self._detect_async_dialect(async_src)
+      self._detect_async_dialect(self.async_src)
       
   @property
   def dialect(self):
@@ -90,6 +94,15 @@ class Database(object):
     if asyncio.get_running_loop(): return self.async_dialect
     else: return self.sync_dialect
 
+  def _fix_psycopg2_connection_pool(self, pool):
+    class Connection:
+      def __init__(self):
+        self.conn = pool.getconn()
+      def cursor(self): return self.conn.cursor()
+      def close(self):
+        pool.putconn(self.conn)
+    return lambda: Connection()
+  
   
   def _detect_sync_dialect(self, src):
 
