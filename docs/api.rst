@@ -135,13 +135,8 @@ To define a table, add the ``@dqo.Table`` decorator to a class.
 .. autoclass:: ForeignKey
   :members:
 
+.. autoclass:: Index
+  :members:
 
-.. todo::
-
-  .. py:class:: Index(*columns, unique=True, using=None)
-
-    :param columns: The columns the index should cover.
-    :param unique: If the index should be a unique index.
-    :param using: The index method to use, ie ``'btree'``, ``'hash'``, ``'gist'``, ``'gin'``, etc.
 
 

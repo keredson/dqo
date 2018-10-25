@@ -86,7 +86,9 @@ class ForeignKey:
 
 class PrimaryKey:
   '''
-    To identify a single column as a primary key, add ``primary_key=True`` to its column definiton.  For example:
+  :param columns: The columns this primary key is composed of.
+
+  To identify a single column as a primary key, add ``primary_key=True`` to its column definiton.  For example:
     
   .. code-block:: python
 
@@ -116,6 +118,50 @@ class PrimaryKey:
     self.columns = columns
 
 
+class Index:
+  '''
+  :param columns: The columns this index is composed of.
+  :param unique: If this is a unique contraint or not.
+  :param method: The indexing method (``btree``, ``hash``, ``gist``, ``spgist``, ``gin``, or ``brin`` on PosrgreSQL).
+  :param include: A list of non-indexed columns to store in the index.  Postgres 11 feature - see [https://www.postgresql.org/docs/current/static/sql-createindex.html]
+  :param name: The name of the index.
+  
+  Creates an index on the current table.  For example:
+
+  .. code-block:: python
+
+    @dqo.Table()
+    class Something:
+      col1 = dqo.Column(int)
+      col2 = dqo.Column(int)
+      _idx1 = dqo.Index(col1, col2, unique=True)
+      
+  Would generate:
+
+  .. code-block:: sql
+  
+      create table "a" (col1 integer, col2 integer)
+      create unique index on "a" (col1,col2)
+      
+  Columns have convenience parameters ``index`` and ``unique`` to simplify making single column indexs.  Example:
+  
+  .. code-block:: python
+
+    @dqo.Table()
+    class Something:
+      col1 = dqo.Column(int, index=True)
+      col2 = dqo.Column(int, unique=True)
+  
+  '''
+  
+  def __init__(self, *columns, unique=False, method=None, include=None, name=None):
+    self.columns = columns
+    self.unique = unique
+    self.method = method
+    self.include = include
+    self.name = name
+
+
 class Column(Comparable):
   '''
   :param kind: A Python type to be mapped to a database column type.  Or a single-element list (containing a type) representing an array column.
@@ -138,10 +184,12 @@ class Column(Comparable):
       keywords = dqo.Column([str])
   '''
   
-  def __init__(self, kind, name=None, null=True, primary_key=False, default=None, tz=None, foreign_key=None, aka=None):
+  def __init__(self, kind, name=None, null=True, default=None, index=False, unique=False, primary_key=False, tz=None, aka=None):
     self.kind = kind
     self.primary_key = primary_key
     self.default = default
+    self.index = index
+    self.unique = unique
     self.null = null
     self.name = name
     self.aka = aka

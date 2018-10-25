@@ -1,7 +1,7 @@
 import asyncio, inspect, re
 
 from .query import Query
-from .column import Column, PrimaryKey, ForeignKey
+from .column import Column, PrimaryKey, ForeignKey, Index
   
   
 class BaseRow(object):
@@ -112,6 +112,7 @@ def build_table(cls, name=None, db=None, aka=None):
   Table._dqoi_db_name = name or cc_to_snake(cls.__name__)
   Table._dqoi_db = db
   Table._dqoi_pks = [x for x in cls.__dict__.values() if isinstance(x,PrimaryKey)]
+  Table._dqoi_indexes = [x for x in cls.__dict__.values() if isinstance(x,Index)]
   Table._dqoi_columns = get_columns(cls)
   Table._dqoi_aka = aka
   Table._dqoi_fks = get_fks(Table)
@@ -142,6 +143,8 @@ def get_columns(cls):
     ret.append(value)
     if value.primary_key:
       cls._dqoi_pks.append(PrimaryKey(value))
+    if value.index or value.unique:
+      cls._dqoi_indexes.append(Index(value, unique=value.unique))
   return ret
 
 
@@ -155,6 +158,7 @@ def get_fks(cls):
     ret.append(value)
     value._gen_columns()
   return ret
+
 
 
 first_cap_re = re.compile('(.)([A-Z][a-z]+)')

@@ -20,7 +20,7 @@ class DiffBase:
     with self.db.connection() as conn:
       rows = conn.sync_fetch('select tablename from pg_catalog.pg_tables where schemaname=%s order by tablename', ['public'])
       return set([r[0] for r in rows])
-  
+
   def calc_table_changes(self, defined_tables, ignore_tables=None):
     ignore_tables = set() if ignore_tables is None else set(ignore_tables)
     to_rename = {}
@@ -60,6 +60,20 @@ class DiffBase:
     fk_defs = [self.fk_def(d, fk, args) for fk in table._dqoi_fks if not fk.fake]
     return [('alter table %s add %s' % (d.term(table._dqoi_db_name), fk_def),[]) for fk_def in fk_defs]
   
+  def add_indexes(self, table):
+    ret = []
+    for index in table._dqoi_indexes:
+      d = self.dialect.for_query()
+      args = []
+      cmd = ['create', 'unique' if index.unique else None, 'index', d.term(index.name) if index.name else None, 'on', d.term(table._dqoi_db_name)]
+      if index.method:
+        cmd += ['using', ''.join(filter(str.isalnum,index.method))]
+      cmd.append('(%s)' % ','.join([d.term(c.name) for c in index.columns]))
+      if index.include:
+        cmd.append('include (%s)' % ','.join([d.term(c.name) for c in index.include]))
+      ret.append((' '.join([s for s in cmd if s]),[]))
+    return ret
+  
   def column_def(self, d, col, args):
     parts = [d.term(col.name), self.python_to_db_type(col)]
     if not col.null: parts.append('not null')
@@ -85,6 +99,7 @@ class DiffBase:
 
     for name in table_adds:
       to_run += self.create_table(defined_tables_by_name[name])
+      to_run += self.add_indexes(defined_tables_by_name[name])
     for name in table_adds:
       to_run += self.add_fks(defined_tables_by_name[name])
     

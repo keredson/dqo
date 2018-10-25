@@ -164,4 +164,72 @@ class BaseEvolve:
       ('alter table b add foreign key (a_part1,a_part2) references a (part1,part2)', [])
     ])
 
+  def test_index(self):
+    @dqo.Table(db=self.after)
+    class A:
+      col1 = dqo.Column(int, index=True)
+    changes = self.after.diff()
+    self.assertEqualAndWorks(changes, [
+      ('create table "a" (col1 integer)', []),
+      ('create index on "a" (col1)', []),
+    ])
+
+  def test_unique_index(self):
+    @dqo.Table(db=self.after)
+    class A:
+      col1 = dqo.Column(int, unique=True)
+    changes = self.after.diff()
+    self.assertEqualAndWorks(changes, [
+      ('create table "a" (col1 integer)', []),
+      ('create unique index on "a" (col1)', []),
+    ])
+
+  def test_multi_column_index(self):
+    @dqo.Table(db=self.after)
+    class A:
+      col1 = dqo.Column(int)
+      col2 = dqo.Column(int)
+      _idx = dqo.Index(col1, col2)
+    changes = self.after.diff()
+    self.assertEqualAndWorks(changes, [
+      ('create table "a" (col1 integer, col2 integer)', []),
+      ('create index on "a" (col1,col2)', []),
+    ])
+
+  def test_index_method(self):
+    @dqo.Table(db=self.after)
+    class A:
+      col1 = dqo.Column(int)
+      _idx = dqo.Index(col1, method='hash')
+    changes = self.after.diff()
+    self.assertEqualAndWorks(changes, [
+      ('create table "a" (col1 integer)', []),
+      ('create index on "a" using hash (col1)', []),
+    ])
+
+  def test_index_include(self):
+    @dqo.Table(db=self.after)
+    class A:
+      col1 = dqo.Column(int)
+      col2 = dqo.Column(int)
+      _idx = dqo.Index(col1, include=[col2])
+    changes = self.after.diff()
+    # postgres 11 only so don't run
+    self.assertEqual(changes, [
+      ('create table "a" (col1 integer, col2 integer)', []),
+      ('create index on "a" (col1) include (col2)', []),
+    ])
+
+  def test_index_name(self):
+    @dqo.Table(db=self.after)
+    class A:
+      col1 = dqo.Column(int)
+      _idx = dqo.Index(col1, name='woot')
+    changes = self.after.diff()
+    self.assertEqualAndWorks(changes, [
+      ('create table "a" (col1 integer)', []),
+      ('create index woot on "a" (col1)', []),
+    ])
+
+
 
