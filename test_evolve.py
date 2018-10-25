@@ -71,5 +71,19 @@ class BaseEvolve:
     changes = self.after.diff()
     self.assertEqualsAndWorks(changes, [('create table something (col1 text[])', [])])
 
+  def test_fk(self):
+    @dqo.Table(db=self.after)
+    class A:
+      id = dqo.Column(int, primary_key=True)
+    @dqo.Table(db=self.after)
+    class B:
+      id = dqo.Column(int, primary_key=True)
+      a = dqo.ForeignKey(A.id)
+    changes = self.after.diff()
+    self.assertEqualsAndWorks(changes, [
+      ('create table "a" ("id" serial primary key)', []),
+      ('create table b ("id" serial primary key, a_id integer)', []),
+      ('alter table b add foreign key (a_id) references a ("id")', []),
+    ])
 
 

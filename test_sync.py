@@ -3,10 +3,22 @@ import asyncio
 import dqo
 
 
+def define_tables(db):
+  @dqo.Table(db=db)
+  class A:
+    id = dqo.Column(int, primary_key=True)
+  @dqo.Table(db=db)
+  class B:
+    id = dqo.Column(int, primary_key=True)
+    a = dqo.ForeignKey(A.id)
+  globals().update({k:v for k,v in locals().items() if k!='db'})
+
+
 class BaseSync:
 
   @classmethod
   def setUpClass(cls):
+    define_tables(cls.db)
     global Something
     @dqo.Table(db=cls.db)
     class Something:
@@ -90,5 +102,14 @@ class BaseSync:
     Something.ALL.insert(col1=1)
     Something.ALL.insert(col1=2)
     self.assertEqual(Something.ALL.count_by(Something.col1, Something.col2), {(1,None):1,(2,None):1})
+    
+  def test_fk(self):
+    a = A()
+    a.save()
+    self.assertTrue(a.id > 0)
+    b = B()
+    b.a_id = a.id
+    b.save()
+    self.assertEqual(B.ALL.first().a_id, a.id)
     
 

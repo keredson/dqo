@@ -38,13 +38,24 @@ class DiffBase:
         to_rename[old_name] = name
       if len(possible_renames)>1:
         raise Exception('table %s has too many possible matches to rename: %s' % (name, possible_renames))
-    return to_add, to_delete, to_rename
+    return sorted(to_add), sorted(to_delete), to_rename
+  
+  def fk_def(self, d, fk, args):
+    frm = ','.join([d.term(c.name) for c in fk.frm])
+    to = ','.join([d.term(c.name) for c in fk.to])
+    return 'foreign key (%s) references %s (%s)' % (frm, fk.to[0].tbl._dqoi_db_name, to)
     
   def create_table(self, table):
     d = self.dialect.for_query()
     args = []
     columns = [self.column_def(d, col, args) for col in table._dqoi_columns]
     return [('create table %s (%s)' % (d.term(table._dqoi_db_name), ', '.join(columns)), args)]
+  
+  def add_fks(self, table):
+    d = self.dialect.for_query()
+    args = []
+    fk_defs = [self.fk_def(d, fk, args) for fk in table._dqoi_fks]
+    return [('alter table %s add %s' % (d.term(table._dqoi_db_name), fk_def),[]) for fk_def in fk_defs]
   
   def column_def(self, d, col, args):
     parts = [d.term(col.name), self.python_to_db_type(col)]
@@ -70,8 +81,9 @@ class DiffBase:
     print('table_adds, table_deletes, table_renames', table_adds, table_deletes, table_renames)
 
     for name in table_adds:
-      print('add', name)
       to_run += self.create_table(defined_tables_by_name[name])
+    for name in table_adds:
+      to_run += self.add_fks(defined_tables_by_name[name])
     
     return to_run
   
@@ -94,7 +106,7 @@ class DiffPostgres(DiffBase):
       is_array_type = True
       kind = kind[0]
     db_type = self.python_to_db_type_map[kind]
-    if col.tz:
+    if hasattr(col,'tz') and col.tz:
       db_type += ' with time zone'
     if is_array_type:
       db_type += '[]'

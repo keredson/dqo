@@ -592,20 +592,23 @@ class Query(object):
   def _insert_sql_(self, d, sql, args):
     sql.write('insert into ')
     sql.write(d.term(self._tbl._dqoi_db_name))
-    sql.write(' (')
-    values = []
-    first = True
-    for k,v in self._insert.items():
-      if k.startswith('_'): continue
-      column = self._tbl._dqoi_columns_by_attr_name[k]
-      if first: first = False
-      else: sql.write(',')
-      sql.write(d.term(column.name))
-      args.append(v)
-      values.append(d.arg)
-    sql.write(') values (')
-    sql.write(','.join(values))
-    sql.write(')')
+    to_insert = {k:v for k,v in self._insert.items() if not k.startswith('_')}
+    if to_insert:
+      sql.write(' (')
+      values = []
+      first = True
+      for k,v in to_insert.items():
+        column = self._tbl._dqoi_columns_by_attr_name[k]
+        if first: first = False
+        else: sql.write(',')
+        sql.write(d.term(column.name))
+        args.append(v)
+        values.append(d.arg)
+      sql.write(') values (')
+      sql.write(','.join(values))
+      sql.write(')')
+    else:
+      sql.write(' default values')
     if self._tbl._pk:
       sql.write(' returning ')
       sql.write(','.join([c.name for c in self._tbl._pk]))

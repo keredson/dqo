@@ -28,6 +28,27 @@ class Comparable:
     return Condition('or', [self, other])
 
 
+def allow_tz(kind):
+  return kind in (datetime.datetime,)
+
+class ForeignKey:
+
+  def __init__(self, *to_columns):
+    self.to = to_columns
+    self._name = None
+
+  def _gen_columns(self):
+    self.frm = []
+    for c in self.to:
+      c2 = Column(c.kind, null=c.null)
+      c2._name = c2.name = '%s_%s' % (c.tbl._dqoi_db_name, c.name)
+      if hasattr(c,'tz'):
+        c2.tz = c.tz
+      self.frm.append(c2)
+      self.tbl._dqoi_columns.append(c2)
+    return self.frm
+  
+
 class Column(Comparable):
   '''
   :param kind: A Python type to be mapped to a database column type.  Or a single-element list (containing a type) representing an array column.
@@ -37,7 +58,6 @@ class Column(Comparable):
   :param index: If a single column index (w/ the database's default type, ie. BTREE) should be created for this column.
   :param unique: If a single column **UNIQUE** index should be created for this column.
   :param primary_key: If this column should be the primary key for this table.
-  :param foreign_key: The other column this column should be a foreign_key to.
   :param aka: A string or list of strings with previous names of this column, used for renaming.
   :param tz: If a datatime column, can specify if it's a timezone aware column.
   
@@ -51,16 +71,18 @@ class Column(Comparable):
       keywords = dqo.Column([str])
   '''
   
-  def __init__(self, kind, name=None, null=True, primary_key=False, default=None, tz=None):
+  def __init__(self, kind, name=None, null=True, primary_key=False, default=None, tz=None, foreign_key=None, aka=None):
     self.kind = kind
     self.primary_key = primary_key
     self.default = default
     self.null = null
     self.name = name
-    self.tz = tz
-    if tz is not None and kind not in (datetime.datetime,):
+    self.aka = aka
+    if allow_tz(kind):
+      self.tz = tz
+    if tz is not None and not allow_tz(kind):
       raise ValueError('tz only allowed for datetime columns')
-    
+      
   def _set_name(self, name):
     self._name = name
     if not self.name:

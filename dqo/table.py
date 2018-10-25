@@ -1,7 +1,7 @@
 import asyncio, inspect, re
 
 from .query import Query
-from .column import Column
+from .column import Column, ForeignKey
   
   
 class BaseRow(object):
@@ -29,13 +29,15 @@ class BaseRow(object):
         pk = await self._tbl.ALL.insert(**self.__dict__)
         for c,v in zip(self._tbl._pk, pk):
           self.__dict__[c.name] = v
-          
         self.__dict__['_new'] = False
         self.__dict__['_dirty'] = set()
         return self
       return f()
     else:
-      self._tbl.ALL.insert(**self.__dict__)
+      pk = self._tbl.ALL.insert(**self.__dict__)
+      if pk is not None:
+        for c,v in zip(self._tbl._pk, pk):
+          self.__dict__[c.name] = v
       self.__dict__['_new'] = False
       self.__dict__['_dirty'] = set()
       return self
@@ -98,12 +100,13 @@ def build_table(cls, name=None, db=None, aka=None):
   class Row(BaseRow):
     _tbl = Table
   
-  Table._dqoi_db_name = cc_to_snake(cls.__name__)
+  Table._dqoi_db_name = name or cc_to_snake(cls.__name__)
   Table._dqoi_db = db
   Table._dqoi_columns = get_columns(cls)
-  Table._dqoi_columns_by_attr_name = {c._name:c for c in Table._dqoi_columns}
   Table._dqoi_aka = aka
-  
+  Table._dqoi_fks = get_fks(Table)
+  Table._dqoi_columns_by_attr_name = {c._name:c for c in Table._dqoi_columns}
+    
   Table.ALL = Query(Table)
   Table.__name__ = cls.__name__
   Row.__name__ = cls.__name__
@@ -124,8 +127,22 @@ def get_columns(cls):
     if name.startswith('__'): continue 
     if not isinstance(value, Column): continue
     value._set_name(name)
+    value.tbl = cls
     ret.append(value)
   return ret
+
+
+def get_fks(cls):
+  ret = []
+  for name, value in cls.__dict__.items():
+    if name.startswith('__'): continue
+    if not isinstance(value, ForeignKey): continue
+    value._name = name
+    value.tbl = cls
+    ret.append(value)
+    value._gen_columns()
+  return ret
+
 
 first_cap_re = re.compile('(.)([A-Z][a-z]+)')
 all_cap_re = re.compile('([a-z0-9])([A-Z])')
