@@ -16,9 +16,11 @@ Data Query Objects
    
    quickstart
    querying
+   connections
    schema
    evolve
    api
+   performance
 
 
 
