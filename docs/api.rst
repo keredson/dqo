@@ -129,6 +129,12 @@ To define a table, add the ``@dqo.Table`` decorator to a class.
 .. autoclass:: Column
   :members:
 
+.. autoclass:: PrimaryKey
+  :members:
+
+.. autoclass:: ForeignKey
+  :members:
+
 
 .. todo::
 
@@ -138,14 +144,4 @@ To define a table, add the ``@dqo.Table`` decorator to a class.
     :param unique: If the index should be a unique index.
     :param using: The index method to use, ie ``'btree'``, ``'hash'``, ``'gist'``, ``'gin'``, etc.
 
-  .. py:class:: PrimaryKey(*columns)
-
-    :param columns: The columns the index should cover.
-
-  .. py:class:: ForeignKey(from_columns, to_columns)
-
-    :param from_columns: A list of the columns on this table.
-    :param to_columns: A list of the columns on the other table.
-    
-    The length of ``from_columns`` must match the length of ``to_columns``.
 

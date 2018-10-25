@@ -49,6 +49,9 @@ class DiffBase:
     d = self.dialect.for_query()
     args = []
     columns = [self.column_def(d, col, args) for col in table._dqoi_columns]
+    if table._dqoi_pk:
+      pk_cols = [d.term(c.name) for c in table._dqoi_pk.columns]
+      columns.append('primary key (%s)' % ','.join(pk_cols))
     return [('create table %s (%s)' % (d.term(table._dqoi_db_name), ', '.join(columns)), args)]
   
   def add_fks(self, table):
@@ -99,7 +102,7 @@ class DiffPostgres(DiffBase):
 
   def python_to_db_type(self, col):
     if col.kind==int and col.primary_key==True:
-      return 'serial primary key'
+      return 'serial'
     is_array_type = False
     kind = col.kind
     if isinstance(kind, list):

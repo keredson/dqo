@@ -481,7 +481,7 @@ class Query(object):
     elif data:
       self._cmd = CMD.INSERT
       self._insert = data
-    if self._tbl._pk:
+    if self._tbl._dqoi_pk:
       sql, args = self._sql()
       def f(rows):
         if self._cmd == CMD.INSERT:
@@ -609,9 +609,9 @@ class Query(object):
       sql.write(')')
     else:
       sql.write(' default values')
-    if self._tbl._pk:
+    if self._tbl._dqoi_pk:
       sql.write(' returning ')
-      sql.write(','.join([c.name for c in self._tbl._pk]))
+      sql.write(','.join([c.name for c in self._tbl._dqoi_pk.columns]))
       
   def _delete_sql_(self, d, sql, args):
     sql.write('delete from ')

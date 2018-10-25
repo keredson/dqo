@@ -32,6 +32,36 @@ def allow_tz(kind):
   return kind in (datetime.datetime,)
 
 class ForeignKey:
+  '''
+  Defines a foreign key relationship from this table to another.  For example:
+
+  .. code-block:: python
+
+    @dqo.Table()
+    class A:
+      id = dqo.Column(int, primary_key=True)
+
+    @dqo.Table()
+    class B:
+      id = dqo.Column(int, primary_key=True)
+      a = dqo.ForeignKey(A.id)
+  
+  IF you want to create a multi-column foreign key, pass in multiple columns:
+
+  .. code-block:: python
+
+    @dqo.Table()
+    class B:
+      id = dqo.Column(int, primary_key=True)
+      my_a = dqo.ForeignKey(A.part1, A.part2)
+  
+  A foreign key creates one database column for every referenced column, named by a combination of the foreign key name and the 
+  columns it's referencing.  So the above example would have columns ``my_a_part1`` and ``my_a_part2`` on table ``b`` as shown:
+
+  .. code-block:: sql
+
+      alter table b add foreign key (my_a_part1,my_a_part2) references a (part1,part2)
+    '''
 
   def __init__(self, *to_columns):
     self.to = to_columns
@@ -41,13 +71,45 @@ class ForeignKey:
     self.frm = []
     for c in self.to:
       c2 = Column(c.kind, null=c.null)
-      c2._name = c2.name = '%s_%s' % (c.tbl._dqoi_db_name, c.name)
+      c2._name = c2.name = '%s_%s' % (self._name, c.name)
       if hasattr(c,'tz'):
         c2.tz = c.tz
       self.frm.append(c2)
       self.tbl._dqoi_columns.append(c2)
     return self.frm
   
+
+class PrimaryKey:
+  '''
+    To identify a single column as a primary key, add ``primary_key=True`` to its column definiton.  For example:
+    
+  .. code-block:: python
+
+    @dqo.Table()
+    class A:
+      id = dqo.Column(int, primary_key=True)
+      
+  This will make the ``id`` column the primary key for the table.
+  
+  To create a multi-column primary key, use the ``PrimaryKey`` class, passing in the component columns.  For example:
+
+  .. code-block:: python
+  
+    @dqo.Table()
+    class A:
+      part1 = dqo.Column(int)
+      part2 = dqo.Column(int)
+      _pk = dqo.PrimaryKey(part1, part2)
+  
+  Calling it ``_pk`` isn't necessary or special, just convention.  The name of the variable isn't used, just make sure it doesn't 
+  conflict with any column names.
+    
+  '''
+  def __init__(self, *columns):
+    for col in columns:
+      col.null = False
+    self.columns = columns
+
 
 class Column(Comparable):
   '''
