@@ -11,24 +11,31 @@ def define_tables(db):
   class B:
     id = dqo.Column(int, primary_key=True)
     a = dqo.ForeignKey(A.id)
-  globals().update({k:v for k,v in locals().items() if k!='db'})
+  @dqo.Table(db=db)
+  class Something:
+    id = dqo.Column(int, primary_key=True)
+    col1 = dqo.Column(int)
+    col2 = dqo.Column(str)
+    col3 = dqo.Column(int, name='col4')
+  @dqo.Table(db=db)
+  class Something2:
+    col1 = dqo.Column(int)
+    col2 = dqo.Column(str)
+    col3 = dqo.Column(int, name='col4')
+  return {k:v for k,v in locals().items() if k!='db'}
 
 
 class BaseSync:
 
   @classmethod
   def setUpClass(cls):
-    define_tables(cls.db)
-    global Something
-    @dqo.Table(db=cls.db)
-    class Something:
-      col1 = dqo.Column(int)
-      col2 = dqo.Column(str)
-      col3 = dqo.Column(int, name='col4')
+    cls.tables = define_tables(cls.db)
+    globals().update(cls.tables)
     cls.db.evolve()
 
   def setUp(self):
-    Something.ALL.delete()
+    for tbl in self.tables.values():
+      tbl.ALL.delete()
 
   def test_insert_and_select_all(self):
     Something.ALL.insert(col1=1)
@@ -59,10 +66,10 @@ class BaseSync:
     self.assertEqual(Something.ALL.first().col1, 1)
 
   def test_first_col_diff_name(self):
-    Something.ALL.insert(col3=4)
-    o = Something.ALL.first()
+    Something2.ALL.insert(col3=4)
+    o = Something2.ALL.first()
     self.assertEqual(o.col3, 4)
-    self.assertEqual(repr(o), '<Something col1=None col2=None col3=4>')
+    self.assertEqual(repr(o), '<Something2 col1=None col2=None col3=4>')
 
   def test_instance_class_name(self):
     Something.ALL.insert(col1=1)
@@ -70,9 +77,9 @@ class BaseSync:
     self.assertEqual(o.__class__.__name__, 'Something')
 
   def test_instance_repr(self):
-    Something.ALL.insert(col1=1)
-    o = Something.ALL.first()
-    self.assertEqual(repr(o), '<Something col1=1 col2=None col3=None>')
+    Something2.ALL.insert(col1=1)
+    o = Something2.ALL.first()
+    self.assertEqual(repr(o), '<Something2 col1=1 col2=None col3=None>')
     
   def test_order_by(self):
     Something.ALL.insert(col1=1)

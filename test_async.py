@@ -2,6 +2,9 @@ import asyncio
 
 import dqo
 
+from test_sync import define_tables
+
+
 def async_test(af):
   def test_f(self):
     event_loop = asyncio.new_event_loop()
@@ -19,17 +22,14 @@ class BaseAsync:
 
   @classmethod
   def setUpClass(cls):
-    global Something
-    @dqo.Table(db=cls.db)
-    class Something:
-      id = dqo.Column(int, primary_key=True)
-      col1 = dqo.Column(int)
-      col2 = dqo.Column(str)
+    cls.tables = define_tables(cls.db)
+    globals().update(cls.tables)
     cls.db.evolve()
 
   @async_test
   async def setUp(self):
-    await Something.ALL.delete()
+    for tbl in self.tables.values():
+      await tbl.ALL.delete()
 
   @async_test
   async def test_select_all(self):
