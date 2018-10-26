@@ -103,7 +103,6 @@ class DiffBase:
     defined_tables_by_name = {tbl._dqoi_db_name:tbl for tbl in defined_tables}
   
     table_adds, table_deletes, table_renames = self.calc_table_changes(defined_tables, ignore_tables=ignore_tables)
-    print('table_adds, table_deletes, table_renames', table_adds, table_deletes, table_renames)
 
     for name in table_adds:
       to_run += self.create_table(defined_tables_by_name[name])

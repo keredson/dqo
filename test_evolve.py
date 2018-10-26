@@ -79,7 +79,7 @@ class BaseEvolve:
       _pk = dqo.PrimaryKey(part1, part2)
     changes = self.after.diff()
     self.assertEqualAndWorks(changes,  [
-      ('create table "a" (part1 integer not null, part2 integer not null, primary key (part1,part2))', [])
+      ('create table a (part1 integer not null, part2 integer not null, primary key (part1,part2))', [])
     ])
 
   def test_double_pk(self):
@@ -112,9 +112,9 @@ class BaseEvolve:
       a = dqo.ForeignKey(A.id)
     changes = self.after.diff()
     self.assertEqualAndWorks(changes, [
-      ('create table "a" ("id" serial not null, primary key ("id"))', []),
-      ('create table b ("id" serial not null, a_id integer not null, primary key ("id"))', []),
-      ('alter table b add foreign key (a_id) references a ("id")', []),
+      ('create table a (id serial not null, primary key (id))', []),
+      ('create table b (id serial not null, a_id integer not null, primary key (id))', []),
+      ('alter table b add foreign key (a_id) references a (id)', []),
     ])
 
   def test_fake_fk(self):
@@ -127,8 +127,8 @@ class BaseEvolve:
       a = dqo.ForeignKey(A.id, fake=True)
     changes = self.after.diff()
     self.assertEqualAndWorks(changes, [
-      ('create table "a" ("id" serial not null, primary key ("id"))', []),
-      ('create table b ("id" serial not null, a_id integer not null, primary key ("id"))', []),
+      ('create table a (id serial not null, primary key (id))', []),
+      ('create table b (id serial not null, a_id integer not null, primary key (id))', []),
     ])
 
   def test_double_fks(self):
@@ -142,10 +142,10 @@ class BaseEvolve:
       y = dqo.ForeignKey(A.id)
     changes = self.after.diff()
     self.assertEqualAndWorks(changes, [
-      ('create table "a" ("id" serial not null, primary key ("id"))', []),
-      ('create table b ("id" serial not null, x_id integer not null, y_id integer not null, primary key ("id"))', []),
-      ('alter table b add foreign key (x_id) references a ("id")', []),
-      ('alter table b add foreign key (y_id) references a ("id")', []),
+      ('create table a (id serial not null, primary key (id))', []),
+      ('create table b (id serial not null, x_id integer not null, y_id integer not null, primary key (id))', []),
+      ('alter table b add foreign key (x_id) references a (id)', []),
+      ('alter table b add foreign key (y_id) references a (id)', []),
     ])
 
   def test_multi_column_fk(self):
@@ -159,7 +159,7 @@ class BaseEvolve:
       a = dqo.ForeignKey(A.part1, A.part2)
     changes = self.after.diff()
     self.assertEqualAndWorks(changes, [
-      ('create table "a" (part1 integer not null, part2 integer not null, primary key (part1,part2))', []), 
+      ('create table a (part1 integer not null, part2 integer not null, primary key (part1,part2))', []), 
       ('create table b (a_part1 integer not null, a_part2 integer not null)', []), 
       ('alter table b add foreign key (a_part1,a_part2) references a (part1,part2)', [])
     ])
@@ -170,8 +170,8 @@ class BaseEvolve:
       col1 = dqo.Column(int, index=True)
     changes = self.after.diff()
     self.assertEqualAndWorks(changes, [
-      ('create table "a" (col1 integer)', []),
-      ('create index on "a" (col1)', []),
+      ('create table a (col1 integer)', []),
+      ('create index on a (col1)', []),
     ])
 
   def test_unique_index(self):
@@ -180,8 +180,8 @@ class BaseEvolve:
       col1 = dqo.Column(int, unique=True)
     changes = self.after.diff()
     self.assertEqualAndWorks(changes, [
-      ('create table "a" (col1 integer)', []),
-      ('create unique index on "a" (col1)', []),
+      ('create table a (col1 integer)', []),
+      ('create unique index on a (col1)', []),
     ])
 
   def test_multi_column_index(self):
@@ -192,8 +192,8 @@ class BaseEvolve:
       _idx = dqo.Index(col1, col2)
     changes = self.after.diff()
     self.assertEqualAndWorks(changes, [
-      ('create table "a" (col1 integer, col2 integer)', []),
-      ('create index on "a" (col1,col2)', []),
+      ('create table a (col1 integer, col2 integer)', []),
+      ('create index on a (col1,col2)', []),
     ])
 
   def test_index_method(self):
@@ -203,8 +203,8 @@ class BaseEvolve:
       _idx = dqo.Index(col1, method='hash')
     changes = self.after.diff()
     self.assertEqualAndWorks(changes, [
-      ('create table "a" (col1 integer)', []),
-      ('create index on "a" using hash (col1)', []),
+      ('create table a (col1 integer)', []),
+      ('create index on a using hash (col1)', []),
     ])
 
   def test_index_include(self):
@@ -216,8 +216,8 @@ class BaseEvolve:
     changes = self.after.diff()
     # postgres 11 only so don't run
     self.assertEqual(changes, [
-      ('create table "a" (col1 integer, col2 integer)', []),
-      ('create index on "a" (col1) include (col2)', []),
+      ('create table a (col1 integer, col2 integer)', []),
+      ('create index on a (col1) include (col2)', []),
     ])
 
   def test_index_name(self):
@@ -227,8 +227,8 @@ class BaseEvolve:
       _idx = dqo.Index(col1, name='woot')
     changes = self.after.diff()
     self.assertEqualAndWorks(changes, [
-      ('create table "a" (col1 integer)', []),
-      ('create index woot on "a" (col1)', []),
+      ('create table a (col1 integer)', []),
+      ('create index woot on a (col1)', []),
     ])
 
   def test_drop_table(self):
@@ -238,7 +238,7 @@ class BaseEvolve:
     self.before.evolve()
     changes = self.after.diff()
     self.assertEqualAndWorks(changes, [
-      ('drop table "a"', []),
+      ('drop table a', []),
     ])
 
   def test_rename_table(self):
@@ -251,7 +251,21 @@ class BaseEvolve:
       col1 = dqo.Column(int)
     changes = self.after.diff()
     self.assertEqualAndWorks(changes, [
-      ('alter table "a" rename to b', []),
+      ('alter table a rename to b', []),
+    ])
+
+
+  def test_rename_column(self):
+    @dqo.Table(db=self.before)
+    class A:
+      col1 = dqo.Column(int)
+    self.before.evolve()
+    @dqo.Table(db=self.after)
+    class A:
+      col2 = dqo.Column(int, aka='col1')
+    changes = self.after.diff()
+    self.assertEqualAndWorks(changes, [
+      ('alter table a alter column col1 rename to col2', []),
     ])
 
 

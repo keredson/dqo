@@ -3,6 +3,12 @@ import asyncio
 
 import dqo
 
+from test_sync import define_tables
+
+tbls = define_tables(None)
+A = tbls['A']
+B = tbls['B']
+
 @dqo.Table()
 class Something:
   col1 = dqo.Column(int, primary_key=True)
@@ -20,67 +26,67 @@ class SQL(unittest.TestCase):
 
   def test_select_all(self):
     sql, args = Something.ALL._sql()
-    self.assertEqual(sql, 'select col1,col2 from something')
+    self.assertEqual(sql, 'select s1.col1,s1.col2 from something as s1')
     self.assertEqual(args, [])
 
   def test_select_also_already_selected_col(self):
     sql, args = Something.ALL.select(+Something.col2)._sql()
-    self.assertEqual(sql, 'select col1,col2 from something')
+    self.assertEqual(sql, 'select s1.col1,s1.col2 from something as s1')
     self.assertEqual(args, [])
 
   def test_select_col1(self):
     sql, args = Something.ALL.select(Something.col1)._sql()
-    self.assertEqual(sql, 'select col1 from something')
+    self.assertEqual(sql, 'select s1.col1 from something as s1')
     self.assertEqual(args, [])
 
   def test_select_not_col1(self):
     sql, args = Something.ALL.select(-Something.col1)._sql()
-    self.assertEqual(sql, 'select col2 from something')
+    self.assertEqual(sql, 'select s1.col2 from something as s1')
     self.assertEqual(args, [])
 
   def test_select_nothing(self):
     sql, args = Something.ALL.select()._sql()
-    self.assertEqual(sql, 'select  from something') # not valid sql
+    self.assertEqual(sql, 'select  from something as s1') # not valid sql
     self.assertEqual(args, [])
 
   def test_select_add_col2(self):
     sql, args = Something.ALL.select().select(+Something.col2)._sql()
-    self.assertEqual(sql, 'select col2 from something')
+    self.assertEqual(sql, 'select s1.col2 from something as s1')
     self.assertEqual(args, [])
 
   def test_where(self):
     sql, args = Something.ALL.where(Something.col1==1)._sql()
-    self.assertEqual(sql, 'select col1,col2 from something where col1=?')
+    self.assertEqual(sql, 'select s1.col1,s1.col2 from something as s1 where s1.col1=?')
     self.assertEqual(args, [1])
 
   def test_where_kwargs(self):
     sql, args = Something.ALL.where(col1=1)._sql()
-    self.assertEqual(sql, 'select col1,col2 from something where col1=?')
+    self.assertEqual(sql, 'select s1.col1,s1.col2 from something as s1 where s1.col1=?')
     self.assertEqual(args, [1])
 
   def test_where_args_and_kwargs(self):
     sql, args = Something.ALL.where(Something.col1==1, col2=2)._sql()
-    self.assertEqual(sql, 'select col1,col2 from something where col1=? and col2=?')
+    self.assertEqual(sql, 'select s1.col1,s1.col2 from something as s1 where s1.col1=? and s1.col2=?')
     self.assertEqual(args, [1,2])
 
   def test_and(self):
     sql, args = Something.ALL.where((Something.col1==1) & (Something.col2==2))._sql()
-    self.assertEqual(sql, 'select col1,col2 from something where col1=? and col2=?')
+    self.assertEqual(sql, 'select s1.col1,s1.col2 from something as s1 where s1.col1=? and s1.col2=?')
     self.assertEqual(args, [1,2])
 
   def test_or(self):
     sql, args = Something.ALL.where((Something.col1==1) | (Something.col2==2))._sql()
-    self.assertEqual(sql, 'select col1,col2 from something where col1=? or col2=?')
+    self.assertEqual(sql, 'select s1.col1,s1.col2 from something as s1 where s1.col1=? or s1.col2=?')
     self.assertEqual(args, [1,2])
 
   def test_nested_conditional(self):
     sql, args = Something.ALL.where((Something.col1==1) | (Something.col2==2), col1=3)._sql()
-    self.assertEqual(sql, 'select col1,col2 from something where (col1=? or col2=?) and col1=?')
+    self.assertEqual(sql, 'select s1.col1,s1.col2 from something as s1 where (s1.col1=? or s1.col2=?) and s1.col1=?')
     self.assertEqual(args, [1,2,3])
 
   def test_nested_conditional2(self):
     sql, args = Something.ALL.where((Something.col1==3) | (Something.col1==1) & (Something.col2==2))._sql()
-    self.assertEqual(sql, 'select col1,col2 from something where col1=? or (col1=? and col2=?)')
+    self.assertEqual(sql, 'select s1.col1,s1.col2 from something as s1 where s1.col1=? or (s1.col1=? and s1.col2=?)')
     self.assertEqual(args, [3,1,2])
 
   def test_delete(self):
@@ -133,80 +139,80 @@ class SQL(unittest.TestCase):
 
   def test_select_limit(self):
     sql = Something.ALL.limit(2)._sql()
-    self.assertEqual(sql, ('select col1,col2 from something limit ?', [2]))
+    self.assertEqual(sql, ('select s1.col1,s1.col2 from something as s1 limit ?', [2]))
 
   def test_select_where_limit(self):
     sql = Something.ALL.where(col1=1).limit(2)._sql()
-    self.assertEqual(sql, ('select col1,col2 from something where col1=? limit ?', [1,2]))
+    self.assertEqual(sql, ('select s1.col1,s1.col2 from something as s1 where s1.col1=? limit ?', [1,2]))
 
   def test_select_first(self):
     sql = Something.ALL.first()
-    self.assertEqual(self.echo.history, [('select col1,col2 from something limit ?', [1])])
+    self.assertEqual(self.echo.history, [('select s1.col1,s1.col2 from something as s1 limit ?', [1])])
 
   def test_order_by(self):
     sql = Something.ALL.order_by(Something.col1)._sql()
-    self.assertEqual(sql, ('select col1,col2 from something order by col1', []))
+    self.assertEqual(sql, ('select s1.col1,s1.col2 from something as s1 order by s1.col1', []))
 
   def test_order_desc(self):
     sql = Something.ALL.order_by(Something.col1.desc)._sql()
-    self.assertEqual(sql, ('select col1,col2 from something order by col1 desc', []))
+    self.assertEqual(sql, ('select s1.col1,s1.col2 from something as s1 order by s1.col1 desc', []))
     sql = Something.ALL.order_by(-Something.col1)._sql()
-    self.assertEqual(sql, ('select col1,col2 from something order by col1 desc', []))
+    self.assertEqual(sql, ('select s1.col1,s1.col2 from something as s1 order by s1.col1 desc', []))
 
   def test_order_asc(self):
     sql = Something.ALL.order_by(Something.col1.asc)._sql()
-    self.assertEqual(sql, ('select col1,col2 from something order by col1 asc', []))
+    self.assertEqual(sql, ('select s1.col1,s1.col2 from something as s1 order by s1.col1 asc', []))
     sql = Something.ALL.order_by(+Something.col1)._sql()
-    self.assertEqual(sql, ('select col1,col2 from something order by col1 asc', []))
+    self.assertEqual(sql, ('select s1.col1,s1.col2 from something as s1 order by s1.col1 asc', []))
 
   def test_order_by_multiple(self):
     sql = Something.ALL.order_by(Something.col1, -Something.col2)._sql()
-    self.assertEqual(sql, ('select col1,col2 from something order by col1, col2 desc', []))
+    self.assertEqual(sql, ('select s1.col1,s1.col2 from something as s1 order by s1.col1, s1.col2 desc', []))
 
   def test_order_by_clobber(self):
     # order by should always clobber any previous calls to order by on the same query object
     sql = Something.ALL.order_by(Something.col1).order_by(Something.col2)._sql()
-    self.assertEqual(sql, ('select col1,col2 from something order by col2', []))
+    self.assertEqual(sql, ('select s1.col1,s1.col2 from something as s1 order by s1.col2', []))
 
   def test_count(self):
     Something.ALL.count()
-    self.assertEqual(self.echo.history, [('select count(1) from something', [])])
+    self.assertEqual(self.echo.history, [('select count(1) from something as s1', [])])
 
   def test_count_by(self):
     Something.ALL.count_by(Something.col1)
-    self.assertEqual(self.echo.history, [('select col1,count(1) from something group by col1', [])])
+    self.assertEqual(self.echo.history, [('select s1.col1,count(1) from something as s1 group by s1.col1', [])])
 
   def test_order_by_count(self):
     Something.ALL.order_by(dqo.sql.count.desc).count_by(Something.col1)
-    self.assertEqual(self.echo.history, [('select col1,count(1) from something group by col1 order by count(1) desc', [])])
+    self.assertEqual(self.echo.history, [('select s1.col1,count(1) from something as s1 group by s1.col1 order by count(1) desc', [])])
 
   def test_count_by_2_cols(self):
     Something.ALL.count_by(Something.col1, Something.col2)
-    self.assertEqual(self.echo.history, [('select col1,col2,count(1) from something group by col1,col2', [])])
+    self.assertEqual(self.echo.history, [('select s1.col1,s1.col2,count(1) from something as s1 group by s1.col1,s1.col2', [])])
 
   def test_select_where_eq(self):
     sql = Something.ALL.where(Something.col1 == 2)._sql()
-    self.assertEqual(sql, ('select col1,col2 from something where col1=?', [2]))
+    self.assertEqual(sql, ('select s1.col1,s1.col2 from something as s1 where s1.col1=?', [2]))
 
   def test_select_where_ne(self):
     sql = Something.ALL.where(Something.col1 != 2)._sql()
-    self.assertEqual(sql, ('select col1,col2 from something where col1<>?', [2]))
+    self.assertEqual(sql, ('select s1.col1,s1.col2 from something as s1 where s1.col1<>?', [2]))
 
   def test_select_where_gt(self):
     sql = Something.ALL.where(Something.col1 > 2)._sql()
-    self.assertEqual(sql, ('select col1,col2 from something where col1>?', [2]))
+    self.assertEqual(sql, ('select s1.col1,s1.col2 from something as s1 where s1.col1>?', [2]))
 
   def test_select_where_lt(self):
     sql = Something.ALL.where(Something.col1 < 2)._sql()
-    self.assertEqual(sql, ('select col1,col2 from something where col1<?', [2]))
+    self.assertEqual(sql, ('select s1.col1,s1.col2 from something as s1 where s1.col1<?', [2]))
 
   def test_select_where_gte(self):
     sql = Something.ALL.where(Something.col1 >= 2)._sql()
-    self.assertEqual(sql, ('select col1,col2 from something where col1>=?', [2]))
+    self.assertEqual(sql, ('select s1.col1,s1.col2 from something as s1 where s1.col1>=?', [2]))
 
   def test_select_where_lte(self):
     sql = Something.ALL.where(Something.col1 <= 2)._sql()
-    self.assertEqual(sql, ('select col1,col2 from something where col1<=?', [2]))
+    self.assertEqual(sql, ('select s1.col1,s1.col2 from something as s1 where s1.col1<=?', [2]))
 
   def test_insert_col_diff_name(self):
     Something2.ALL.insert(col1=1)
@@ -218,17 +224,20 @@ class SQL(unittest.TestCase):
 
   def test_where_col_diff_name(self):
     sql = Something2.ALL.where(col1=1)._sql()
-    self.assertEqual(sql, ('select id,col2 from something2 where col2=?', [1]))
+    self.assertEqual(sql, ('select s1.id,s1.col2 from something2 as s1 where s1.col2=?', [1]))
 
   def test_order_by_col_diff_name(self):
     sql = Something2.ALL.order_by(Something2.col1)._sql()
-    self.assertEqual(sql, ('select id,col2 from something2 order by col2', []))
+    self.assertEqual(sql, ('select s1.id,s1.col2 from something2 as s1 order by s1.col2', []))
 
   def test_inner_query(self):
     sql, args = Something.ALL.where(Something.col2.in_(Something.ALL.select(Something.col1)))._sql()
-    self.assertEqual(sql, 'select col1,col2 from something where col2 in (select col1 from something)')
+    self.assertEqual(sql, 'select s1.col1,s1.col2 from something as s1 where s1.col2 in (select s1.col1 from something as s1)')
     self.assertEqual(args, [])
 
+  def test_join(self):
+    sql = A.ALL.inner_join(B, on=A.id==B.a_id)._sql()
+    self.assertEqual(sql, ('select a1.id from a as a1 inner join b as b1 on a1.id=b1.a_id', []))
 
 if __name__ == '__main__':
     unittest.main()

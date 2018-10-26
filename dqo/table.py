@@ -90,6 +90,18 @@ def TableDecorator(name=None, db=None, aka=None):
     return build_table(cls, name=name, db=db, aka=aka)
   return f
 
+
+class AliasedTable:
+  def __init__(self, tbl, name):
+    self.tbl = tbl
+    self.name = name
+    self._dqoi_db = tbl._dqoi_db
+
+  def _sql_(self, d, sql, args):
+    self.tbl._sql_(d, sql, args)
+    sql.write(' as ')
+    sql.write(d.term(self.name))
+
   
 def build_table(cls, name=None, db=None, aka=None):
 
@@ -97,40 +109,44 @@ def build_table(cls, name=None, db=None, aka=None):
   elif isinstance(aka,str): aka = set([aka])
   else: aka = set(aka)
 
-  Table = cls
-
   def __new__(cls, **kwargs):
     return Row(**kwargs)
-  Table.__new__ = __new__
+  cls.__new__ = __new__
   def __instancecheck__(self, instance):
     return isinstance(instance, Row)
-  Table.__instancecheck__ = __instancecheck__
+  cls.__instancecheck__ = __instancecheck__
+  cls.as_ = lambda name: AliasedTable(cls, name)
+  def _sql_(d, sql, args):
+    sql.write(d.term(cls._dqoi_db_name))
+    sql.write(' as ')
+    sql.write(d.term(d.registered[cls]))    
+  cls._sql_ = _sql_
 
   class Row(BaseRow):
-    _tbl = Table
+    _tbl = cls
   
-  Table._dqoi_db_name = name or cc_to_snake(cls.__name__)
-  Table._dqoi_db = db
-  Table._dqoi_pks = [x for x in cls.__dict__.values() if isinstance(x,PrimaryKey)]
-  Table._dqoi_indexes = [x for x in cls.__dict__.values() if isinstance(x,Index)]
-  Table._dqoi_columns = get_columns(cls)
-  Table._dqoi_aka = aka
-  Table._dqoi_fks = get_fks(Table)
-  Table._dqoi_columns_by_attr_name = {c._name:c for c in Table._dqoi_columns}
+  cls._dqoi_db_name = name or cc_to_snake(cls.__name__)
+  cls._dqoi_db = db
+  cls._dqoi_pks = [x for x in cls.__dict__.values() if isinstance(x,PrimaryKey)]
+  cls._dqoi_indexes = [x for x in cls.__dict__.values() if isinstance(x,Index)]
+  cls._dqoi_columns = get_columns(cls)
+  cls._dqoi_aka = aka
+  cls._dqoi_fks = get_fks(cls)
+  cls._dqoi_columns_by_attr_name = {c._name:c for c in cls._dqoi_columns}
     
-  Table.ALL = Query(Table)
-  Table.__name__ = cls.__name__
+  cls.ALL = Query(cls)
+  cls.__name__ = cls.__name__
   Row.__name__ = cls.__name__
   
-  if len(Table._dqoi_pks)>1:
-    raise ValueError('there can be only one (primary key): %s' % Table._dqoi_pks)
-  Table._dqoi_pk = Table._dqoi_pks[0] if Table._dqoi_pks else None
-  del Table._dqoi_pks
+  if len(cls._dqoi_pks)>1:
+    raise ValueError('there can be only one (primary key): %s' % cls._dqoi_pks)
+  cls._dqoi_pk = cls._dqoi_pks[0] if cls._dqoi_pks else None
+  del cls._dqoi_pks
   
   if db:
-    db._known_tables.append(Table)
+    db._known_tables.append(cls)
   
-  return Table
+  return cls
 
 
 def get_columns(cls):
@@ -150,7 +166,7 @@ def get_columns(cls):
 
 def get_fks(cls):
   ret = []
-  for name, value in cls.__dict__.items():
+  for name, value in list(cls.__dict__.items()):
     if name.startswith('__'): continue
     if not isinstance(value, ForeignKey): continue
     value._name = name

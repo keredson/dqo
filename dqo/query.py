@@ -1,6 +1,6 @@
 import asyncio, copy, enum, io
 
-from .column import Column, PosColumn, NegColumn, Condition
+from .column import Column, PosColumn, NegColumn, Condition, InnerQuery
 from .database import Dialect
 from .connection import TLS
 from .function import sql
@@ -20,6 +20,7 @@ class Query(object):
     self._cmd = CMD.SELECT
     self._select = None
     self._set_values = {}
+    self._joins = []
     self._conditions = []
     self._limit = None
     self._order_by = None
@@ -31,6 +32,7 @@ class Query(object):
     new._cmd = self._cmd
     new._select = copy.copy(self._select)
     new._set_values = copy.copy(self._set_values)
+    new._joins = copy.copy(self._joins)
     new._conditions = copy.copy(self._conditions)
     new._limit = self._limit
     new._order_by = copy.copy(self._order_by)
@@ -95,7 +97,7 @@ class Query(object):
     If you send in an explicit list (no +/-) you will replace the existing selected columns.  If you pass in +/- columns,
     you will modify the existing selected columns.  You cannot do both in the came call.
     '''
-    self = copy. copy(self)
+    self = copy.copy(self)
     if self._select is None:
       self._select = self._tbl._dqoi_columns
     existing = set([c.name for c in self._select])
@@ -179,6 +181,26 @@ class Query(object):
   def plus(self, *fks):
     # TODO
     pass
+    
+  def left_join(self, other, on=None):
+    self = copy.copy(self)
+    self._joins.append(Join('left', other, on))
+    return self
+    
+  def right_join(self, other, on=None):
+    self = copy.copy(self)
+    self._joins.append(Join('right', other, on))
+    return self
+    
+  def inner_join(self, other, on=None):
+    self = copy.copy(self)
+    self._joins.append(Join('inner', other, on))
+    return self
+    
+  def outer_join(self, other, on=None):
+    self = copy.copy(self)
+    self._joins.append(Join('outer', other, on))
+    return self
     
   def order_by(self, *columns):
     '''
@@ -354,7 +376,7 @@ class Query(object):
       >>> User.ALL.count_by(User.first_name, User.last_name)
       {('John','Smith'):1, ('Paul','Anderson'):2}
     '''
-    self = copy. copy(self)
+    self = copy.copy(self)
     self._select = list(columns) + [sql.count(sql(1))]
     self._group_by = columns
     return self._fetch_map(len(columns))
@@ -531,7 +553,13 @@ class Query(object):
     if self._db_: return self._db_
     if self._tbl._dqoi_db: return self._tbl._dqoi_db
     return dqo.DB
-      
+    
+  def _register_tables(self, d):
+    d.register(self._tbl)
+    for join in self._joins:
+      if hasattr(join.other, '_dqoi_db_name'):
+        d.register(join.other)
+  
   def _sql(self):
     db = self._db
     dialect = (db.dialect if db else Dialect.GENERIC).for_query()
@@ -551,10 +579,12 @@ class Query(object):
       self._delete_sql_(d, sql, args)
 
   def _select_sql_(self, d, sql, args):
+    self._register_tables(d)
     sql.write('select ')
     self._gen_select(d, sql, args)
     sql.write(' from ')
-    sql.write(d.term(self._tbl._dqoi_db_name))
+    self._tbl._sql_(d, sql, args)
+    self._gen_joins(d, sql, args)
     self._gen_where(d, sql, args)
     if self._group_by:
       sql.write(' group by ')
@@ -575,6 +605,10 @@ class Query(object):
       args.append(self._limit)
       sql.write(d.arg)
       
+  def _gen_joins(self, d, sql, args):
+   for join in self._joins:
+    join._sql_(d, sql, args)
+  
   def _update_sql_(self, d, sql, args):
     sql.write('update ')
     sql.write(d.term(self._tbl._dqoi_db_name))
@@ -636,6 +670,28 @@ class Query(object):
     condition = self._conditions[0] if len(self._conditions)==1 else Condition('and', self._conditions)
     condition._sql_(d, sql, args)
 
+
+class Join:
+
+  def __init__(self, type, other, on):
+    self.type = type
+    self.other = other
+    self.on = on
+
+  def _sql_(self, d, sql, args):
+    sql.write(' ')
+    sql.write(self.type)
+    sql.write(' join ')
+    if isinstance(self.other, InnerQuery):
+      sql.write('(')
+      self.other._sql_(d, sql, args)
+      sql.write(')')
+    else:
+      self.other._sql_(d, sql, args)
+    if self.on:
+      sql.write(' on ')
+      self.on._sql_(d, sql, args)
+      
 
 class AsyncIterable:
 

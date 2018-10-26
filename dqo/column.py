@@ -81,6 +81,7 @@ class InnerQuery:
   def __init__(self, query):
     self.query = query
   def _sql_(self, d, sql, args):
+    d = d.for_inner_query()
     sql.write('(')
     self.query._sql_(d, sql, args)
     sql.write(')')
@@ -135,10 +136,12 @@ class ForeignKey:
     for c in self.to:
       c2 = Column(c.kind, null=c.null)
       c2._name = c2.name = '%s_%s' % (self._name, c.name)
+      c2.tbl = self.tbl
       if hasattr(c,'tz'):
         c2.tz = c.tz
       self.frm.append(c2)
       self.tbl._dqoi_columns.append(c2)
+      setattr(self.tbl, c2._name, c2)
     return self.frm
   
 
@@ -268,7 +271,7 @@ class Column(BaseColumn):
     return NegColumn(self)
 
   def _sql_(self, d, sql, args):
-    sql.write(d.term(self.name))
+    sql.write(d.reference(self))
 
   @property
   def asc(self):
