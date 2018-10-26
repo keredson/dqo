@@ -113,6 +113,21 @@ class BaseEvolve:
     changes = self.after.diff()
     self.assertEqualAndWorks(changes, [
       ('create table a (id serial not null, primary key (id))', []),
+      ('create table b (id serial not null, a_id integer, primary key (id))', []),
+      ('alter table b add foreign key (a_id) references a (id)', []),
+    ])
+
+  def test_not_null_fk(self):
+    @dqo.Table(db=self.after)
+    class A:
+      id = dqo.Column(int, primary_key=True)
+    @dqo.Table(db=self.after)
+    class B:
+      id = dqo.Column(int, primary_key=True)
+      a = dqo.ForeignKey(A.id, null=False)
+    changes = self.after.diff()
+    self.assertEqualAndWorks(changes, [
+      ('create table a (id serial not null, primary key (id))', []),
       ('create table b (id serial not null, a_id integer not null, primary key (id))', []),
       ('alter table b add foreign key (a_id) references a (id)', []),
     ])
@@ -128,7 +143,7 @@ class BaseEvolve:
     changes = self.after.diff()
     self.assertEqualAndWorks(changes, [
       ('create table a (id serial not null, primary key (id))', []),
-      ('create table b (id serial not null, a_id integer not null, primary key (id))', []),
+      ('create table b (id serial not null, a_id integer, primary key (id))', []),
     ])
 
   def test_double_fks(self):
@@ -143,7 +158,7 @@ class BaseEvolve:
     changes = self.after.diff()
     self.assertEqualAndWorks(changes, [
       ('create table a (id serial not null, primary key (id))', []),
-      ('create table b (id serial not null, x_id integer not null, y_id integer not null, primary key (id))', []),
+      ('create table b (id serial not null, x_id integer, y_id integer, primary key (id))', []),
       ('alter table b add foreign key (x_id) references a (id)', []),
       ('alter table b add foreign key (y_id) references a (id)', []),
     ])
@@ -160,7 +175,7 @@ class BaseEvolve:
     changes = self.after.diff()
     self.assertEqualAndWorks(changes, [
       ('create table a (part1 integer not null, part2 integer not null, primary key (part1,part2))', []), 
-      ('create table b (a_part1 integer not null, a_part2 integer not null)', []), 
+      ('create table b (a_part1 integer, a_part2 integer)', []), 
       ('alter table b add foreign key (a_part1,a_part2) references a (part1,part2)', [])
     ])
 

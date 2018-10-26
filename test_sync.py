@@ -158,9 +158,16 @@ class BaseSync:
     print(list(x))
     self.assertTrue(isinstance(x, int))
     
-
   def test_join(self):
     a_id = A.ALL.insert()
     B.ALL.insert(a_id=a_id)
     self.assertEqual(A.ALL.inner_join(B, on=A.id==B.a_id).first().id, a_id)
+
+  def test_joins(self):
+    a_id = A.ALL.insert()
+    B.ALL.insert(a_id=None)
+    self.assertEqual(A.ALL.left_join(B, on=A.id==B.a_id).first().id, a_id)
+    self.assertEqual(A.ALL.inner_join(B, on=A.id==B.a_id).first(), None)
+    self.assertEqual(len(list(A.ALL.full_outer_join(B, on=A.id==B.a_id))), 2)
+    self.assertEqual(len(list(A.ALL.right_join(B, on=A.id==B.a_id))), 1)
 

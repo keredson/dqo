@@ -94,6 +94,7 @@ class ForeignKey:
   '''
   :param to_columns: The columns this foreign key refers to.
   :param fake: A "fake" foreign key will give you the syntax sugar without actually creating the restriction in the database.  This is sometimes important for performance reasons.
+  :param null: If nulls are allowed.
 
   Defines a foreign key relationship from this table to another.  For example:
 
@@ -126,15 +127,16 @@ class ForeignKey:
       references a (part1,part2)
     '''
 
-  def __init__(self, *to_columns, fake=False):
+  def __init__(self, *to_columns, fake=False, null=True):
     self.to = to_columns
     self._name = None
     self.fake = fake
+    self.null = null
 
   def _gen_columns(self):
     self.frm = []
     for c in self.to:
-      c2 = Column(c.kind, null=c.null)
+      c2 = Column(c.kind, null=self.null)
       c2._name = c2.name = '%s_%s' % (self._name, c.name)
       c2.tbl = self.tbl
       if hasattr(c,'tz'):

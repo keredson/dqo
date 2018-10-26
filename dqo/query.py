@@ -183,23 +183,35 @@ class Query(object):
     pass
     
   def left_join(self, other, on=None):
+    '''
+    Performs a left join.
+    '''
     self = copy.copy(self)
     self._joins.append(Join('left', other, on))
     return self
     
   def right_join(self, other, on=None):
+    '''
+    Performs a right join.
+    '''
     self = copy.copy(self)
     self._joins.append(Join('right', other, on))
     return self
     
   def inner_join(self, other, on=None):
+    '''
+    Performs an inner join.
+    '''
     self = copy.copy(self)
     self._joins.append(Join('inner', other, on))
     return self
     
-  def outer_join(self, other, on=None):
+  def full_outer_join(self, other, on=None):
+    '''
+    Performs a full outer join.
+    '''
     self = copy.copy(self)
-    self._joins.append(Join('outer', other, on))
+    self._joins.append(Join('full outer', other, on))
     return self
     
   def order_by(self, *columns):
