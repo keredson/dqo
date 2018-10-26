@@ -129,4 +129,9 @@ class BaseSync:
     o = Something.ALL.where(Something.col1.is_not_null).first()
     self.assertEqual(o.col1, 1)
     
+  def test_inner_query(self):
+    Something.ALL.insert(col1=1)
+    Something.ALL.insert(col3=1)
+    o = Something.ALL.where(Something.col3.in_(Something.ALL.select(Something.col1))).first()
+    self.assertEqual(o.col3, 1)
 

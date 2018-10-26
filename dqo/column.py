@@ -60,15 +60,30 @@ class BaseColumn:
     '''
     return Condition('is not', [self, sql.null])
 
-  def in_(self):
+  def in_(self, something):
     '''
-    TODO
+      Returns a condition where this column is in a list or inner query.
     '''
+    return Condition('in', [self, prepare_something(something)])
 
   def not_in(self):
     '''
-    TODO
+      Returns a condition where this column is in a list or inner query.
     '''
+    return Condition('not in', [self, prepare_something(something)])
+
+def prepare_something(something):
+  if hasattr(something, '_sql_'):
+    return InnerQuery(something)
+
+
+class InnerQuery:
+  def __init__(self, query):
+    self.query = query
+  def _sql_(self, d, sql, args):
+    sql.write('(')
+    self.query._sql_(d, sql, args)
+    sql.write(')')
 
 
 def allow_tz(kind):

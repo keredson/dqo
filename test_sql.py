@@ -224,6 +224,10 @@ class SQL(unittest.TestCase):
     sql = Something2.ALL.order_by(Something2.col1)._sql()
     self.assertEqual(sql, ('select id,col2 from something2 order by col2', []))
 
+  def test_inner_query(self):
+    sql, args = Something.ALL.where(Something.col2.in_(Something.ALL.select(Something.col1)))._sql()
+    self.assertEqual(sql, 'select col1,col2 from something where col2 in (select col1 from something)')
+    self.assertEqual(args, [])
 
 
 if __name__ == '__main__':
