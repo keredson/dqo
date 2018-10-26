@@ -500,7 +500,7 @@ class Query(object):
     if instances:
       self._cmd = CMD.INSERT_MANY
       self._insert = instances
-    elif data:
+    else:
       self._cmd = CMD.INSERT
       self._insert = data
     if self._tbl._dqoi_pk:
@@ -508,9 +508,13 @@ class Query(object):
       def f(rows):
         if self._cmd == CMD.INSERT:
           rows = list(rows)
-          return rows[0] if rows else None
+          if len(self._tbl._dqoi_pk.columns)==1:
+            return rows[0][0] if rows else None
+          else:
+            return tuple(rows[0]) if rows else None
         else:
-          return rows
+          print('rows', rows)
+          return list(rows)
       if asyncio.get_running_loop():
         if not self._insert and self._cmd == CMD.INSERT_MANY:
           return self._noop([] if instances else None)
@@ -573,6 +577,8 @@ class Query(object):
       self._select_sql_(d, sql, args)
     if self._cmd==CMD.INSERT:
       self._insert_sql_(d, sql, args)
+    if self._cmd==CMD.INSERT_MANY:
+      self._insert_many_sql_(d, sql, args)
     if self._cmd==CMD.UPDATE:
       self._update_sql_(d, sql, args)
     if self._cmd==CMD.DELETE:
@@ -626,12 +632,12 @@ class Query(object):
   def _insert_sql_(self, d, sql, args):
     sql.write('insert into ')
     sql.write(d.term(self._tbl._dqoi_db_name))
-    to_insert = {k:v for k,v in self._insert.items() if not k.startswith('_')}
+    to_insert = [(k,v) for k,v in self._insert.items() if not k.startswith('_')]
     if to_insert:
       sql.write(' (')
       values = []
       first = True
-      for k,v in to_insert.items():
+      for k,v in to_insert:
         column = self._tbl._dqoi_columns_by_attr_name[k]
         if first: first = False
         else: sql.write(',')
@@ -646,6 +652,13 @@ class Query(object):
     if self._tbl._dqoi_pk:
       sql.write(' returning ')
       sql.write(','.join([c.name for c in self._tbl._dqoi_pk.columns]))
+      
+  def _insert_many_sql_(self, d, sql, args):
+    if not to_insert:
+      # don't fail inserting no rows
+      sql.write('select 1 where 1=2')
+      return
+    raise Exception('TODO')
       
   def _delete_sql_(self, d, sql, args):
     sql.write('delete from ')

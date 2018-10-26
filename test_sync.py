@@ -135,11 +135,19 @@ class BaseSync:
     o = Something.ALL.where(Something.col3.in_(Something.ALL.select(Something.col1))).first()
     self.assertEqual(o.col3, 1)
 
+  def test_insert_return_single(self):
+    x = Something.ALL.insert(col1=1)
+    self.assertTrue(isinstance(x, int))
+    
+  def TODO_test_insert_return_multiple(self):
+    x = Something.ALL.insert([{'col1':1, 'col1':2}])
+    print(list(x))
+    self.assertTrue(isinstance(x, int))
+    
+
   def test_join(self):
-    a = A()
-    a.save()
-    b = B()
-    b.a_id = a.id
-    b.save()
+    a = A.ALL.insert()
+    print(a)
+    B.ALL.insert(a_id=a.id)
     self.assertEqual(A.ALL.inner_join(B, on=A.id==B.a_id).first().id, a.id)
 
