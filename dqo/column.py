@@ -1,4 +1,4 @@
-import datetime
+import copy, datetime
 
 
 
@@ -66,11 +66,24 @@ class BaseColumn:
     '''
     return Condition('in', [self, prepare_something(something)])
 
-  def not_in(self):
+  def not_in(self, something):
     '''
       Returns a condition where this column is in a list or inner query.
     '''
     return Condition('not in', [self, prepare_something(something)])
+  
+  def frm(self, s):
+    '''
+    Returns this column bound to a given table alias.  Example:
+
+    .. code-block:: python
+
+      A.ALL.left_join(B.as_('b')).where(B.id.frm('b').is_not_null)
+    '''
+    self = copy.copy(self)
+    self._alias = s
+    return self
+    
 
 def prepare_something(something):
   if hasattr(something, '_sql_'):
@@ -256,6 +269,7 @@ class Column(BaseColumn):
     self.null = null
     self.name = name
     self.aka = aka
+    self._alias = None
     if allow_tz(kind):
       self.tz = tz
     if tz is not None and not allow_tz(kind):
@@ -273,7 +287,12 @@ class Column(BaseColumn):
     return NegColumn(self)
 
   def _sql_(self, d, sql, args):
-    sql.write(d.reference(self))
+    if self._alias:
+      sql.write(d.term(self._alias))
+      sql.write('.')
+      sql.write(d.term(self.name))
+    else:
+      sql.write(d.reference(self))
 
   @property
   def asc(self):

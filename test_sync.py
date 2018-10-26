@@ -171,3 +171,9 @@ class BaseSync:
     self.assertEqual(len(list(A.ALL.full_outer_join(B, on=A.id==B.a_id))), 2)
     self.assertEqual(len(list(A.ALL.right_join(B, on=A.id==B.a_id))), 1)
 
+  def test_join_query(self):
+    a_id = A.ALL.insert()
+    B.ALL.insert(a_id=a_id)
+    self.assertEqual(A.ALL.left_join(B.ALL.select(B.id, B.a_id).as_('jq'), on=A.id==B.a_id.frm('jq')).first().id, a_id)
+
+

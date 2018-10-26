@@ -25,6 +25,7 @@ class Query(object):
     self._limit = None
     self._order_by = None
     self._group_by = None
+    self._alias = None
   
   def __copy__(self):
     new = Query(self._tbl)
@@ -37,6 +38,7 @@ class Query(object):
     new._limit = self._limit
     new._order_by = copy.copy(self._order_by)
     new._group_by = copy.copy(self._group_by)
+    new._alias = self._alias
     return new
     
   def __iter__(self):
@@ -212,6 +214,11 @@ class Query(object):
     '''
     self = copy.copy(self)
     self._joins.append(Join('full outer', other, on))
+    return self
+  
+  def as_(self, s):
+    self = copy.copy(self)
+    self._alias = s
     return self
     
   def order_by(self, *columns):
@@ -686,10 +693,13 @@ class Join:
     sql.write(' ')
     sql.write(self.type)
     sql.write(' join ')
-    if isinstance(self.other, InnerQuery):
+    if isinstance(self.other, Query):
+      if not self.other._alias:
+        raise ValueError("Joining to an inner query requires the query to be aliased.  Example: MyTable.ALL.where([...]).as_('x')")
       sql.write('(')
       self.other._sql_(d, sql, args)
-      sql.write(')')
+      sql.write(') as ')
+      sql.write(d.term(self.other._alias))
     else:
       self.other._sql_(d, sql, args)
     if self.on:

@@ -239,6 +239,10 @@ class SQL(unittest.TestCase):
     sql = A.ALL.inner_join(B, on=A.id==B.a_id)._sql()
     self.assertEqual(sql, ('select a1.id from a as a1 inner join b as b1 on a1.id=b1.a_id', []))
 
+  def test_join_query(self):
+    sql = A.ALL.left_join(B.ALL.select(B.id, B.a_id).as_('jq'), on=A.id==B.a_id.frm('jq'))._sql()
+    self.assertEqual(sql, ('select a1.id from a as a1 left join (select b1.id,b1.a_id from b as b1) as jq on a1.id=jq.a_id', []))
+
 if __name__ == '__main__':
     unittest.main()
 
