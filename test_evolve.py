@@ -231,5 +231,28 @@ class BaseEvolve:
       ('create index woot on "a" (col1)', []),
     ])
 
+  def test_drop_table(self):
+    @dqo.Table(db=self.before)
+    class A:
+      col1 = dqo.Column(int)
+    self.before.evolve()
+    changes = self.after.diff()
+    self.assertEqualAndWorks(changes, [
+      ('drop table "a"', []),
+    ])
+
+  def test_rename_table(self):
+    @dqo.Table(db=self.before)
+    class A:
+      col1 = dqo.Column(int)
+    self.before.evolve()
+    @dqo.Table(db=self.after, aka='a')
+    class B:
+      col1 = dqo.Column(int)
+    changes = self.after.diff()
+    self.assertEqualAndWorks(changes, [
+      ('alter table "a" rename to b', []),
+    ])
+
 
 

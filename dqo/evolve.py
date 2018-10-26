@@ -87,6 +87,14 @@ class DiffBase:
         args.append(col.default)
     return ' '.join(parts)
     
+  def drop_table(self, name):
+    d = self.dialect.for_query()
+    return [('drop table %s' % d.term(name),[])]
+    
+  def rename_table(self, old_name, new_name):
+    d = self.dialect.for_query()
+    return [('alter table %s rename to %s' % (d.term(old_name), d.term(new_name)),[])]
+    
   def diff(self, ignore_tables = []):
   
     to_run = []
@@ -102,6 +110,10 @@ class DiffBase:
       to_run += self.add_indexes(defined_tables_by_name[name])
     for name in table_adds:
       to_run += self.add_fks(defined_tables_by_name[name])
+    for old_name, new_name in table_renames.items():
+      to_run += self.rename_table(old_name, new_name)
+    for name in table_deletes:
+      to_run += self.drop_table(name)
     
     return to_run
   
