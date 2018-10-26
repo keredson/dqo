@@ -446,49 +446,28 @@ class Query(object):
   
   def insert(self, *args, **data):
     '''
-    Inserts one or more rows.  If only keyword arguments are passed, a single row is inserted.  For example:
+    Inserts one or more rows.  If keyword arguments are passed, a single row is inserted returning the primary key (if defined).  For example:
 
     .. code-block:: python
       
-      user = User.ALL.insert(name='John', email='me@here.org')
+      >>> User.ALL.insert(name='John', email='me@here.org')
+      42
       
-    If a single ``dict`` is passed, a single row is inserted returning the inserted object:
+    If you have a dict of values:
 
     .. code-block:: python
       
-      user = User.ALL.insert({'name':'John', 'email':'me@here.org'})
+      user = User.ALL.insert(**{'name':'John', 'email':'me@here.org'})
     
-    If multiple ``dicts`` are passed, multiple rows are inserted efficiently in a single query, and a list of users are returned:
+    If a list of ``dicts`` are passed, multiple rows are inserted efficiently in a single query, and a list of their primary keys are returned:
 
     .. code-block:: python
       
-      users = User.ALL.insert(
+      >>> User.ALL.insert(
         {'name':'John', 'email':'me@here.org'},
         {'name':'Paul', 'email':'paul@here.org'},
       )
-
-    If a list of ``dicts`` is passed, multiple rows are inserted efficiently in a single query, and a list of users are returned:
-
-    .. code-block:: python
-      
-      users = User.ALL.insert([
-        {'name':'John', 'email':'me@here.org'},
-        {'name':'Paul', 'email':'paul@here.org'},
-      ])
-      
-    Instead of ``dicts``, you can also pass in instance objects.
-
-    .. code-block:: python
-
-      users = []
-      for i in range(10):
-        user = User()
-        user.name = 'Me%i' % i
-        users.append(user)
-        
-      users_with_ids = User.ALL.insert(users)
-      # users will have their auto-incrementing
-      # primary keys set, assuming they have one. 
+      [42, 43]
     '''
     self = copy. copy(self)
     instances = None

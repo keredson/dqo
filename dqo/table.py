@@ -23,21 +23,26 @@ class BaseRow(object):
     if self._new: self.insert()
     else: self.update()
   
+  def __dqoi_save_pk(self, pk):
+    if pk is None: return
+    if len(self._tbl._dqoi_pk.columns) == 1:
+      self.__dict__[self._tbl._dqoi_pk.columns[0].name] = pk
+    else:
+      for c,v in zip(self._tbl._dqoi_pk.columns, pk):
+        self.__dict__[c.name] = v
+  
   def insert(self):
     if asyncio.get_running_loop():
       async def f():
         pk = await self._tbl.ALL.insert(**self.__dict__)
-        for c,v in zip(self._tbl._dqoi_pk.columns, pk):
-          self.__dict__[c.name] = v
+        self.__dqoi_save_pk(pk)
         self.__dict__['_new'] = False
         self.__dict__['_dirty'] = set()
         return self
       return f()
     else:
       pk = self._tbl.ALL.insert(**self.__dict__)
-      if pk is not None:
-        for c,v in zip(self._tbl._dqoi_pk.columns, pk):
-          self.__dict__[c.name] = v
+      self.__dqoi_save_pk(pk)
       self.__dict__['_new'] = False
       self.__dict__['_dirty'] = set()
       return self

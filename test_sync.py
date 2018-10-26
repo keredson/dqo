@@ -22,6 +22,11 @@ def define_tables(db):
     col1 = dqo.Column(int)
     col2 = dqo.Column(str)
     col3 = dqo.Column(int, name='col4')
+  @dqo.Table(db=db)
+  class CompoundPK:
+    k1 = dqo.Column(int)
+    k2 = dqo.Column(int)
+    _pk = dqo.PrimaryKey(k1, k2)
   return {k:v for k,v in locals().items() if k!='db'}
 
 
@@ -139,6 +144,15 @@ class BaseSync:
     x = Something.ALL.insert(col1=1)
     self.assertTrue(isinstance(x, int))
     
+  def test_insert_return_single_no_pk(self):
+    x = Something2.ALL.insert(col1=1)
+    self.assertIsNone(x)
+    
+  def test_insert_return_single_compound_pk(self):
+    k1, k2 = CompoundPK.ALL.insert(k1=1, k2=2)
+    self.assertEqual(k1, 1)
+    self.assertEqual(k2, 2)
+    
   def TODO_test_insert_return_multiple(self):
     x = Something.ALL.insert([{'col1':1, 'col1':2}])
     print(list(x))
@@ -146,8 +160,7 @@ class BaseSync:
     
 
   def test_join(self):
-    a = A.ALL.insert()
-    print(a)
-    B.ALL.insert(a_id=a.id)
-    self.assertEqual(A.ALL.inner_join(B, on=A.id==B.a_id).first().id, a.id)
+    a_id = A.ALL.insert()
+    B.ALL.insert(a_id=a_id)
+    self.assertEqual(A.ALL.inner_join(B, on=A.id==B.a_id).first().id, a_id)
 
