@@ -176,4 +176,13 @@ class BaseSync:
     B.ALL.insert(a_id=a_id)
     self.assertEqual(A.ALL.left_join(B.ALL.select(B.id, B.a_id).as_('jq'), on=A.id==B.a_id.frm('jq')).first().id, a_id)
 
+  def test_join_query_agg(self):
+    a_id = A.ALL.insert()
+    for i in range(5):
+      B.ALL.insert(a_id=a_id)
+    a = A.ALL.left_join(B, on=A.id==B.a_id).select(A.id, dqo.sql.count(1)).group_by(A.id).first()
+    self.assertEqual(a.count, 5)
+    a = A.ALL.left_join(B, on=A.id==B.a_id).select(A.id, dqo.sql.count(1).as_('couunt')).group_by(A.id).first()
+    self.assertEqual(a.couunt, 5)
+
 

@@ -7,6 +7,7 @@ class Function:
 
   def __init__(self, name, args=None):
     self.name = name
+    self._name = name
     self.args = args
     
   def __call__(self, *args):
@@ -34,16 +35,54 @@ class Function:
 
   @property
   def asc(self):
+    '''
+    Example:
+
+    .. code-block:: python
+      
+      q = A.ALL.select(A.id, dqo.sql.count(1) \
+               .left_join(B, on=A.id==B.a_id).as_('couunt')) \
+               .group_by(A.id) \
+               .order_by(dqo.sql.count(1).asc)
+    '''
     return +self
 
   @property
   def desc(self):
+    '''
+    Example:
+
+    .. code-block:: python
+      
+      q = A.ALL.select(A.id, dqo.sql.count(1) \
+               .left_join(B, on=A.id==B.a_id).as_('couunt')) \
+               .group_by(A.id) \
+               .order_by(dqo.sql.count(1).desc)
+    '''
     return -self
+
+  def as_(self, s):
+    '''
+    Returns this function as a different name.  For instance:
+
+    .. code-block:: python
+      
+      a = A.ALL.select(A.id, dqo.sql.count(1) \
+               .left_join(B, on=A.id==B.a_id).as_('couunt')) \
+               .group_by(A.id) \
+               .first()
+    
+    Would give you an ```a.couunt``` with an integer value.
+
+    '''
+    self = copy.copy(self)
+    self._name = s
+    return self
 
 
 class CountFunction(Function):
   def __init__(self, name, args=None):
-    self.name = name
+    super().__init__(name)
     if not args: args = [1]
     args = [sql(a) if a in (1,'*') else a for a in args]
     self.args = args

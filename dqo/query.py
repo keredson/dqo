@@ -3,7 +3,7 @@ import asyncio, copy, enum, io
 from .column import Column, PosColumn, NegColumn, Condition, InnerQuery
 from .database import Dialect
 from .connection import TLS
-from .function import sql
+from .function import sql, Function
 
 class CMD(enum.Enum):
   SELECT = 1
@@ -109,12 +109,14 @@ class Query(object):
     for x in columns:
       if isinstance(x, Column):
         select.append(x)
+      elif isinstance(x, Function):
+        select.append(x)
       elif isinstance(x, PosColumn):
         alsoselect.append(x.column)
       elif isinstance(x, NegColumn):
         unselect.add(x.column.name)
       else:
-        raise ValueError('unknown type %s' % s)
+        raise ValueError('unknown type %s' % x)
     if select and (unselect or alsoselect):
       raise ValueError('You must either select a set of columns (MyTable.col) or a set of selection modifiers (+MyTable.col / -MyTable.col), you cannot mix the two.')
     if unselect:
@@ -124,6 +126,37 @@ class Query(object):
     else:
       self._select = select
     return self
+
+  def group_by(self, *columns):
+    '''
+    TODO
+    '''
+    self = copy.copy(self)
+    existing = set([c.name for c in self._group_by] if self._group_by else [])
+    select = []
+    unselect = set()
+    alsoselect = []
+    for x in columns:
+      if isinstance(x, Column):
+        select.append(x)
+      elif isinstance(x, Function):
+        select.append(x)
+      elif isinstance(x, PosColumn):
+        alsoselect.append(x.column)
+      elif isinstance(x, NegColumn):
+        unselect.add(x.column.name)
+      else:
+        raise ValueError('unknown type %s' % x)
+    if select and (unselect or alsoselect):
+      raise ValueError('You must either select a set of columns (MyTable.col) or a set of selection modifiers (+MyTable.col / -MyTable.col), you cannot mix the two.')
+    if unselect:
+      self._group_by = [c for c in self._select if c.name not in unselect]
+    elif alsoselect:
+      self._group_by += [c for c in alsoselect if c.name not in existing]
+    else:
+      self._group_by = select
+    return self
+    
   
   def where(self, *conditions, **kwargs):
     '''
