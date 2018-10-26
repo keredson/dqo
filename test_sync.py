@@ -119,4 +119,14 @@ class BaseSync:
     b.save()
     self.assertEqual(B.ALL.first().a_id, a.id)
     
+  def test_is_null(self):
+    Something.ALL.insert(col1=1)
+    o = Something.ALL.where(Something.col2.is_null).first()
+    self.assertEqual(o.col1, 1)
+    
+  def test_is_not_null(self):
+    Something.ALL.insert(col1=1)
+    o = Something.ALL.where(Something.col1.is_not_null).first()
+    self.assertEqual(o.col1, 1)
+    
 

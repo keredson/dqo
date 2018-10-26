@@ -73,42 +73,12 @@ Querying
 Columns and Conditions
 ----------------------
 
-.. py:class:: Comparable()
+.. automodule:: dqo.column
 
-  All columns are comparables and obey the normal operators.
-  
-  ======================================== ===============
-  Syntax                                   SQL
-  ======================================== ===============
-  ``User.name == 'John'``                  ``name = 'john'``
-  ``User.age < 5``                         ``age < 5``
-  ``User.age <= 5``                        ``age <= 5``
-  ``User.age > 5``                         ``age > 5``
-  ``User.age >= 5``                        ``age >= 5``
-  ``User.name != 'John'``                  ``name <> 'john'``
-  ``(User.name=='John') & (User.age < 5)`` ``name='john' and age=5``
-  ``(User.age < 2) | (User.age >= 65)``    ``age<2 or age>=65``
-  ======================================== ===============
-  
-  TODO: between, others.
+.. autoclass:: BaseColumn
+  :members:
 
-.. py:class:: Column()
-  
-  .. py:method:: as([alias])
-
-    # TODO
-
-  .. py:method:: in_(list_or_subquery)
-
-    # TODO
-
-  .. py:attribute:: asc
-  
-    The ascending form of the column, used in ``order_by()``.
-
-  .. py:attribute:: desc
-  
-    The descending form of the column, used in ``order_by()``.
+.. automodule:: dqo
 
 
 SQL Functions and Literals

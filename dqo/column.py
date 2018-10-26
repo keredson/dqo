@@ -1,7 +1,26 @@
 import datetime
 
 
-class Comparable:
+
+class BaseColumn:
+  '''
+  All columns obey normal python operators.
+  
+  ======================================== ===============
+  Syntax                                   SQL
+  ======================================== ===============
+  ``User.name == 'John'``                  ``name = 'john'``
+  ``User.age < 5``                         ``age < 5``
+  ``User.age <= 5``                        ``age <= 5``
+  ``User.age > 5``                         ``age > 5``
+  ``User.age >= 5``                        ``age >= 5``
+  ``User.name != 'John'``                  ``name <> 'john'``
+  ``(User.name=='John') & (User.age < 5)`` ``name='john' and age=5``
+  ``(User.age < 2) | (User.age >= 65)``    ``age<2 or age>=65``
+  ======================================== ===============
+  
+  In addition, the following condition generators are supported:
+  '''
 
   def __eq__(self, other):
     return Condition('=', [self, other], sep='')
@@ -26,6 +45,30 @@ class Comparable:
 
   def __or__(self, other):
     return Condition('or', [self, other])
+
+  @property
+  def is_null(self):
+    '''
+    Returns condition where this column is null.
+    '''
+    return Condition('is', [self, sql.null])
+
+  @property
+  def is_not_null(self):
+    '''
+    Returns condition where this column is not null.
+    '''
+    return Condition('is not', [self, sql.null])
+
+  def in_(self):
+    '''
+    TODO
+    '''
+
+  def not_in(self):
+    '''
+    TODO
+    '''
 
 
 def allow_tz(kind):
@@ -162,7 +205,7 @@ class Index:
     self.name = name
 
 
-class Column(Comparable):
+class Column(BaseColumn):
   '''
   :param kind: A Python type to be mapped to a database column type.  Or a single-element list (containing a type) representing an array column.
   :param name: The database name of the column.
@@ -214,10 +257,16 @@ class Column(Comparable):
 
   @property
   def asc(self):
+    '''
+    The ascending form of the column, used in ``order_by()``.
+    '''
     return +self
 
   @property
   def desc(self):
+    '''
+    The descending form of the column, used in ``order_by()``.
+    '''
     return -self
 
 
@@ -268,4 +317,7 @@ class Condition:
 
   def __or__(self, other):
     return Condition('or', [self, other])
-    
+
+
+from .function import sql
+
