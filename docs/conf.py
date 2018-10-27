@@ -44,6 +44,7 @@ extensions = [
     'sphinx.ext.imgmath',
     'sphinx.ext.autodoc',
     'sphinx.ext.todo',
+    'sphinx.ext.graphviz',
 ]
 
 import os, sys

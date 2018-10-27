@@ -12,6 +12,10 @@ def define_tables(db):
     id = dqo.Column(int, primary_key=True)
     a = dqo.ForeignKey(A.id)
   @dqo.Table(db=db)
+  class C:
+    id = dqo.Column(int, primary_key=True)
+    b = dqo.ForeignKey(B.id)
+  @dqo.Table(db=db)
   class Something:
     id = dqo.Column(int, primary_key=True)
     col1 = dqo.Column(int)
@@ -185,4 +189,14 @@ class BaseSync:
     a = A.ALL.left_join(B, on=A.id==B.a_id).select(A.id, dqo.sql.count(1).as_('couunt')).group_by(A.id).first()
     self.assertEqual(a.couunt, 5)
 
+  def test_plus(self):
+    a_id = A.ALL.insert(id=1)
+    b_id = B.ALL.insert(id=2, a_id=a_id)
+    c_id = C.ALL.insert(id=3, b_id=b_id)
+    c = C.ALL.plus(C.b, B.a).first()
+    self.assertEqual(c.id, 3)
+    self.assertEqual(c.b_id, 2)
+    self.assertEqual(c.b.id, 2)
+    self.assertEqual(c.b.a_id, 1)
+    self.assertEqual(c.b.a.id, 1)
 

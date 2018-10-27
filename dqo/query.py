@@ -26,6 +26,7 @@ class Query(object):
     self._order_by = None
     self._group_by = None
     self._alias = None
+    self._plus = Plus()
   
   def __copy__(self):
     new = Query(self._tbl)
@@ -39,6 +40,7 @@ class Query(object):
     new._order_by = copy.copy(self._order_by)
     new._group_by = copy.copy(self._group_by)
     new._alias = self._alias
+    new._plus = copy.copy(self._plus)
     return new
     
   def __iter__(self):
@@ -213,9 +215,84 @@ class Query(object):
     self._conditions += conditions
     return self
     
-  def plus(self, *fks):
-    # TODO
-    pass
+  def plus(self, *foreign_keys):
+    '''
+    This is very useful syntax sugar for SQL joins.  Takes a list of foreign keys to define the paths of the object graph you want
+     to query.  For instance, let's assume you have:
+    
+    .. graphviz::
+
+      digraph foo {
+        rankdir="LR";
+        "Person" -> "Company";
+        "Company" -> "Industry";
+      }
+       
+    If I want to query all people with their employer:
+    
+    .. code-block:: python
+    
+      for person in Person.ALL.plus(Person.employer):
+        print(person, person.employer)
+      
+    If I want to query all employers with their employees:
+    
+    .. code-block:: python
+
+      for company in Company.ALL.plus(Person.employer):
+        print(company)
+        for person in company.employees:
+          print('\\t', person)
+          
+    If I want to know the industry everyone works in:
+
+    .. code-block:: python
+    
+      q = Person.ALL.plus(Person.employer, Company.industry)
+      for person in q:
+        print(person, person.employer.industry)
+    
+    If you want the company with its employees *and* industry:
+
+    .. code-block:: python
+
+      q = Company.ALL \\
+          .plus(Person.employer) \\
+          .plus(Company.industry)
+      for company in q:
+        print(company, 'in', company.industry)
+        for person in company.employees:
+          print('\\t', person)
+          
+    How about all industries with companies and all their employees:
+    
+    .. code-block:: python
+    
+      q = Industry.ALL.plus(Company.industry, Person.employer)
+      for industry in q:
+        print(industry)
+        for company in industry.companies:
+          print('\\t', industry.company)
+          for person in company.employees:
+            print('\\t\\t', person)
+            
+    Every call to this method represents a path in the object graph to be queried, and they can be as long as you wish.
+    If some paths overlap, the individual legs will not be duplicated in the resulting query.
+    
+    **None of these calls will generate O(n) database lookups.**
+    '''
+    self = copy.copy(self)
+    plus = self._plus
+    tbl = self._tbl
+    for fk in foreign_keys:
+      if fk.frm[0].tbl == tbl:
+        tbl = fk.to[0].tbl
+        plus = plus[fk]
+      elif fk.to[0].tbl == tbl:
+        raise Exception('not implemented yet')
+      else:
+        raise Esception('This foreign key has no relation to %s' % tbl)
+    return self
     
   def left_join(self, other, on=None):
     '''
@@ -622,6 +699,7 @@ class Query(object):
     sql.write(' from ')
     self._tbl._sql_(d, sql, args)
     self._gen_joins(d, sql, args)
+    self._gen_plus_joins(d, sql, args)
     self._gen_where(d, sql, args)
     if self._group_by:
       sql.write(' group by ')
@@ -645,6 +723,9 @@ class Query(object):
   def _gen_joins(self, d, sql, args):
    for join in self._joins:
     join._sql_(d, sql, args)
+  
+  def _gen_plus_joins(self, d, sql, args):
+    self._plus._sql_(d, sql, args)
   
   def _update_sql_(self, d, sql, args):
     sql.write('update ')
@@ -698,6 +779,7 @@ class Query(object):
             
   def _gen_select(self, d, sql, args):
     components = self._tbl._dqoi_columns if self._select is None else self._select
+    self._plus.gen_select(d, self._tbl, components)
     first = True
     for component in components:
       if first: first = None
@@ -713,6 +795,76 @@ class Query(object):
     sql.write(' where ')
     condition = self._conditions[0] if len(self._conditions)==1 else Condition('and', self._conditions)
     condition._sql_(d, sql, args)
+  
+  def _build(self, keys, row):
+    o = self._tbl()
+    o.__dict__.update(dict(zip(keys[:self._plus.i], row[:self._plus.i])))
+    self._plus.build(o, keys, row)
+    return o
+    
+
+
+class Plus:
+
+  def __init__(self):
+    self.children = {}
+    self.i = None
+    self.j = None
+    self.aliases = None
+    
+  def __copy__(self):
+    new = Plus()
+    new.children = copy.copy(self.children)
+    return new
+  
+  def build(self, o, keys, row):
+    for fk, plus in self.children.items():
+      o2 = fk.to[0].tbl()
+      o2.__dict__.update(dict(zip(keys[plus.i:plus.j], row[plus.i:plus.j])))
+      o.__dict__[fk._name] = o2
+      plus.build(o2, keys, row)
+
+  def __getitem__(self, fk):
+    children = self.children
+    plus = children.get(fk)
+    if not plus:
+      plus = Plus()
+      children[fk] = plus
+    return plus
+  
+  def gen_select(self, d, tbl, columns):
+    self.aliases = []
+    self.i = len(columns)
+    self.tbl = tbl
+    return self._gen_select(d, columns, self.aliases)
+    
+  def _gen_select(self, d, columns, aliases):
+    for fk, plus in self.children.items():
+      plus.i = len(columns)
+      to_tbl = fk.to[0].tbl
+      alias = d.gen_name(to_tbl._dqoi_db_name)
+      columns.extend([c.frm(alias) for c in to_tbl._dqoi_columns])
+      plus.j = len(columns)
+      aliases.append(alias)
+      plus._gen_select(d, columns, aliases)
+  
+  def _sql_(self, d, sql, args):
+    frm_alias = d.registered[self.tbl]
+    self._gen_joins(d, sql, args, frm_alias, self.aliases.__iter__())
+
+  def _gen_joins(self, d, sql, args, frm_alias, aliases_iter):
+    for fk, plus in self.children.items():
+      to_alias = aliases_iter.__next__()
+      to_tbl = fk.to[0].tbl
+      on = Condition(' and ', [fc.frm(frm_alias)==tc.frm(to_alias) for fc,tc in zip(fk.frm,fk.to)])
+      join = Join('left', to_tbl.as_(to_alias), on=on)
+      join._sql_(d, sql, args)
+      plus._gen_joins(d, sql, args, to_alias, aliases_iter)
+      
+      
+    
+  def __repr__(self):
+    return '%i-%i/%s' % (self.i or 0, self.j or 0, repr(self.children))
 
 
 class Join:
@@ -785,8 +937,7 @@ class SyncIterable:
 
   def __next__(self):
     row = self.iter.__next__()
-    o = self.query._tbl()
-    o.__dict__.update(dict(zip(self.keys, row)))
+    o = self.query._build(self.keys, row)
     return o
 
 import dqo

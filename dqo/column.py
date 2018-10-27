@@ -159,6 +159,11 @@ class ForeignKey:
       setattr(self.tbl, c2._name, c2)
     return self.frm
   
+  def __repr__(self):
+    from_cols = self.frm[0].name if len(self.frm)==1 else '[%s]' % (','.join([c.name for c in self.frm]))
+    to_cols = self.to[0].name if len(self.to)==1 else '[%s]' % (','.join([c.name for c in self.to]))
+    return '(%s.%s => %s.%s)' % (self.frm[0].tbl.__name__, from_cols, self.to[0].tbl.__name__, to_cols)
+  
 
 class PrimaryKey:
   '''
@@ -262,6 +267,7 @@ class Column(BaseColumn):
   
   def __init__(self, kind, name=None, null=True, default=None, index=False, unique=False, primary_key=False, tz=None, aka=None):
     self.kind = kind
+    self.tbl = None # to be assigned by table decorator
     self.primary_key = primary_key
     self.default = default
     self.index = index

@@ -103,7 +103,10 @@ class AliasedTable:
     self._dqoi_db = tbl._dqoi_db
 
   def _sql_(self, d, sql, args):
-    self.tbl._sql_(d, sql, args)
+    if hasattr(self.tbl,'_dqoi_db_name'):
+      sql.write(d.term(self.tbl._dqoi_db_name))
+    else:
+      self.tbl._sql_(d, sql, args)
     sql.write(' as ')
     sql.write(d.term(self.name))
 

@@ -64,6 +64,8 @@ Querying
 
   .. automethod:: insert
 
+  .. automethod:: plus
+
   .. automethod:: update
 
 
