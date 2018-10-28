@@ -778,7 +778,7 @@ class Query(object):
     self._gen_where(d, sql, args)
             
   def _gen_select(self, d, sql, args):
-    components = self._tbl._dqoi_columns if self._select is None else self._select
+    components = list(self._tbl._dqoi_columns) if self._select is None else self._select
     self._plus.gen_select(d, self._tbl, components)
     first = True
     for component in components:

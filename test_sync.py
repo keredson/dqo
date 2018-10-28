@@ -200,3 +200,8 @@ class BaseSync:
     self.assertEqual(c.b.a_id, 1)
     self.assertEqual(c.b.a.id, 1)
 
+  def test_plus_twice(self):
+    sql1 = C.ALL.plus(C.b, B.a)._sql()
+    sql2 = C.ALL.plus(C.b, B.a)._sql()
+    self.assertEqual(sql1, sql2)
+
