@@ -5,6 +5,8 @@ import dqo
 
 class BaseEvolve:
 
+  pk_int = 'integer'
+
   def setUp(self):
     self.before = self.build_db()
     self.after = self.build_db()
@@ -34,7 +36,7 @@ class BaseEvolve:
     class Something:
       col1 = dqo.Column(int, primary_key=True)
     changes = self.after.diff()
-    self.assertEqualAndWorks(changes, [('create table something (col1 serial not null, primary key (col1))', [])])
+    self.assertEqualAndWorks(changes, [('create table something (col1 '+ self.pk_int +' not null, primary key (col1))', [])])
 
   def test_col_different_name(self):
     @dqo.Table(db=self.after)
@@ -112,8 +114,8 @@ class BaseEvolve:
       a = dqo.ForeignKey(A.id)
     changes = self.after.diff()
     self.assertEqualAndWorks(changes, [
-      ('create table a (id serial not null, primary key (id))', []),
-      ('create table b (id serial not null, a_id integer, primary key (id))', []),
+      ('create table a (id '+ self.pk_int +' not null, primary key (id))', []),
+      ('create table b (id '+ self.pk_int +' not null, a_id integer, primary key (id))', []),
       ('alter table b add foreign key (a_id) references a (id)', []),
     ])
 
@@ -127,8 +129,8 @@ class BaseEvolve:
       a = dqo.ForeignKey(A.id, null=False)
     changes = self.after.diff()
     self.assertEqualAndWorks(changes, [
-      ('create table a (id serial not null, primary key (id))', []),
-      ('create table b (id serial not null, a_id integer not null, primary key (id))', []),
+      ('create table a (id '+ self.pk_int +' not null, primary key (id))', []),
+      ('create table b (id '+ self.pk_int +' not null, a_id integer not null, primary key (id))', []),
       ('alter table b add foreign key (a_id) references a (id)', []),
     ])
 
@@ -142,8 +144,8 @@ class BaseEvolve:
       a = dqo.ForeignKey(A.id, fake=True)
     changes = self.after.diff()
     self.assertEqualAndWorks(changes, [
-      ('create table a (id serial not null, primary key (id))', []),
-      ('create table b (id serial not null, a_id integer, primary key (id))', []),
+      ('create table a (id '+ self.pk_int +' not null, primary key (id))', []),
+      ('create table b (id '+ self.pk_int +' not null, a_id integer, primary key (id))', []),
     ])
 
   def test_double_fks(self):
@@ -157,8 +159,8 @@ class BaseEvolve:
       y = dqo.ForeignKey(A.id)
     changes = self.after.diff()
     self.assertEqualAndWorks(changes, [
-      ('create table a (id serial not null, primary key (id))', []),
-      ('create table b (id serial not null, x_id integer, y_id integer, primary key (id))', []),
+      ('create table a (id '+ self.pk_int +' not null, primary key (id))', []),
+      ('create table b (id '+ self.pk_int +' not null, x_id integer, y_id integer, primary key (id))', []),
       ('alter table b add foreign key (x_id) references a (id)', []),
       ('alter table b add foreign key (y_id) references a (id)', []),
     ])

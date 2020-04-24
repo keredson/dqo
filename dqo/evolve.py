@@ -5,6 +5,8 @@ from .database import Dialect
 def Diff(db):
   if db.dialect==Dialect.POSTGRES:
     return DiffPostgres(db)
+  elif db.dialect==Dialect.SQLITE:
+    return DiffSQLite(db)
   else:
     raise Exception("i don't know how to evolve %s" % db.dialect)
     
@@ -17,9 +19,7 @@ class DiffBase:
     self.db = db
     
   def get_existing_table_names(self):
-    with self.db.connection() as conn:
-      rows = conn.sync_fetch('select tablename from pg_catalog.pg_tables where schemaname=%s order by tablename', ['public'])
-      return set([r[0] for r in rows])
+    raise NotImplemented
 
   def calc_table_changes(self, defined_tables, ignore_tables=None):
     ignore_tables = set() if ignore_tables is None else set(ignore_tables)
@@ -118,6 +118,11 @@ class DiffBase:
   
 class DiffPostgres(DiffBase):
   
+  def get_existing_table_names(self):
+    with self.db.connection() as conn:
+      rows = conn.sync_fetch('select tablename from pg_catalog.pg_tables where schemaname=%s order by tablename', ['public'])
+      return set([r[0] for r in rows])
+
   python_to_db_type_map = {
     str: 'text',
     int: 'integer',
@@ -141,5 +146,39 @@ class DiffPostgres(DiffBase):
       db_type += '[]'
     return db_type
     
+
+class DiffSQLite(DiffBase):
+  
+  def get_existing_table_names(self):
+    with self.db.connection() as conn:
+      rows = conn.sync_fetch("SELECT name FROM sqlite_master WHERE type ='table' AND name NOT LIKE 'sqlite_%%';", [])
+      return set([r[0] for r in rows])
+
+  python_to_db_type_map = {
+    str: 'text',
+    int: 'integer',
+    float: 'real',
+    datetime.date: 'date',
+    datetime.datetime: 'timestamp',
+  }
+
+  def python_to_db_type(self, col):
+    if col.kind==int and col.primary_key==True:
+      return 'integer'
+    is_array_type = False
+    kind = col.kind
+    if isinstance(kind, list):
+      is_array_type = True
+      kind = kind[0]
+    db_type = self.python_to_db_type_map[kind]
+    if hasattr(col,'tz') and col.tz:
+      db_type += ' with time zone'
+    if is_array_type:
+      db_type += '[]'
+    return db_type
+    
+  def add_fks(self, table):
+    # not supported in sqlite3
+    return []
 
 

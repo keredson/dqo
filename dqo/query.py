@@ -4,6 +4,8 @@ from .column import Column, PosColumn, NegColumn, Condition, InnerQuery
 from .database import Dialect
 from .connection import TLS
 from .function import sql, Function
+from .util import get_running_loop
+
 
 class CMD(enum.Enum):
   SELECT = 1
@@ -398,7 +400,7 @@ class Query(object):
     if self._select is None:	
       self = copy. copy(self)	
       self._select = self._tbl._dqoi_columns	
-    if asyncio.get_running_loop():
+    if get_running_loop():
       sql, args = self._sql()
       keys = [c._name for c in self._select]
       async def f():
@@ -512,7 +514,7 @@ class Query(object):
 
   def _fetch_map(self, len_keys):
     sql, args = self._sql()
-    if asyncio.get_running_loop():
+    if get_running_loop():
       return self._async_fetch_map(sql, args, len_keys)
     else: 
       return self._sync_fetch_map(sql, args, len_keys)
@@ -544,7 +546,7 @@ class Query(object):
       
   def _fetch_scalar(self):
     sql, args = self._sql()
-    if asyncio.get_running_loop():
+    if get_running_loop():
       return self._async_fetch_scalar(sql, args)
     else: 
       return self._sync_fetch_scalar(sql, args)
@@ -621,33 +623,45 @@ class Query(object):
           else:
             return tuple(rows[0]) if rows else None
         else:
-          print('rows', rows)
           return list(rows)
-      if asyncio.get_running_loop():
+      if get_running_loop():
         if not self._insert and self._cmd == CMD.INSERT_MANY:
           return self._noop([] if instances else None)
-        return self._async_fetch_f(sql, args, f)
+        return self._async_fetch_f(sql, args, f, insert_table=self._tbl)
       else: 
         if not self._insert and self._cmd == CMD.INSERT_MANY:
           return [] if instances else None
-        return self._sync_fetch_f(sql, args, f)
+        return self._sync_fetch_f(sql, args, f, insert_table=self._tbl)
     else:
       return self._execute()
 
   async def _noop(self, ret):
     return ret
   
-  def _sync_fetch_f(self, sql, args, f):
+  def _sync_fetch_f(self, sql, args, f, insert_table=None):
     with self._conn_or_tx_sync as conn:
-      return f(conn.sync_fetch(sql, args))
+      rows = conn.sync_fetch(sql, args)
+      if insert_table and self._dialect()==Dialect.SQLITE:
+        holder = {}
+        def f_cur(cur):
+          sql, args = insert_table.ALL._sql()
+          sql += ' where rowid=?'
+          args.append(cur.lastrowid)
+          cur.execute(sql, args)
+          row = cur.fetchone()
+          holder['row'] = row
+        conn.sync_execute(sql, args, f_cur=f_cur)
+        return f([holder['row']])
+      else:
+        return f(conn.sync_fetch(sql, args))
   
-  async def _async_fetch_f(self, sql, args, f):
+  async def _async_fetch_f(self, sql, args, f, insert_table=None):
     async with self._conn_or_tx_sync as conn:
       return f(await conn.async_fetch(sql, args))
   
   def _execute(self):
     sql, args = self._sql()
-    if asyncio.get_running_loop():
+    if get_running_loop():
       return self._async_execute(sql, args)
     else: 
       return self._sync_execute(sql, args)
@@ -671,10 +685,15 @@ class Query(object):
     for join in self._joins:
       if hasattr(join.other, '_dqoi_db_name'):
         d.register(join.other)
+        
+  def _dialect(self):
+    db = self._db
+    dialect = (db.dialect if db else Dialect.GENERIC).for_query()
+    return dialect
   
   def _sql(self):
     db = self._db
-    dialect = (db.dialect if db else Dialect.GENERIC).for_query()
+    dialect = self._dialect()
     sql = io.StringIO()
     args = []
     self._sql_(dialect, sql, args)
@@ -761,7 +780,7 @@ class Query(object):
       sql.write(')')
     else:
       sql.write(' default values')
-    if self._tbl._dqoi_pk:
+    if self._tbl._dqoi_pk and d!=Dialect.SQLITE:
       sql.write(' returning ')
       sql.write(','.join([c.name for c in self._tbl._dqoi_pk.columns]))
       

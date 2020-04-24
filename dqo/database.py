@@ -1,6 +1,8 @@
 import asyncio, copy, enum, inspect, io, types
 
 from .connection import Connection
+from .util import get_running_loop
+
     
 class Database(object):
   '''
@@ -91,7 +93,7 @@ class Database(object):
     '''
       This property returns the dialect associated with this database. (It auto-switches between sync and async depending on context.)
     '''
-    if asyncio.get_running_loop(): return self.async_dialect
+    if get_running_loop(): return self.async_dialect
     else: return self.sync_dialect
 
   def _fix_psycopg2_connection_pool(self, pool):
@@ -110,6 +112,9 @@ class Database(object):
     
     if conn_or_pool.__class__.__module__.startswith('psycopg2'):
       self.sync_dialect = Dialect.POSTGRES(lib='psycopg2')
+
+    if conn_or_pool.__class__.__module__.startswith('sqlite3'):
+      self.sync_dialect = Dialect.SQLITE(lib='sqlite3')
     
     # did we open a connection?
     if hasattr(conn_or_pool, 'close'):
@@ -150,12 +155,15 @@ class Database(object):
     if conn_or_pool.__class__.__module__.startswith('asyncpg'):
       self.async_dialect = Dialect.POSTGRES(lib='asyncpg')
 
+    if conn_or_pool.__class__.__module__.startswith('aiosqlite'):
+      self.async_dialect = Dialect.SQLITE(lib='aiosqlite')
+
     if not self.dialect:
       raise Exception('could not detect the async database dialect - please open an issue at https://github.com/keredson/dqo')
     
   def connection(self):
     if self._async_init: return Connection(self, self._async_init)
-    if asyncio.get_running_loop():
+    if get_running_loop():
       return Connection(self, self.async_src)
     else: 
       return Connection(self, self.sync_src)
@@ -327,6 +335,18 @@ class PostgresDialect(GenericDialect):
     
     
     
+class SQLiteDialect(GenericDialect):
+  KEYWORDS = set('''
+    ABORT ACTION ADD AFTER ALL ALTER ALWAYS ANALYZE AND AS ASC ATTACH AUTOINCREMENT BEFORE BEGIN BETWEEN BY CASCADE CASE CAST CHECK COLLATE COLUMN COMMIT CONFLICT CONSTRAINT CREATE CROSS CURRENT
+    CURRENT_DATE CURRENT_TIME CURRENT_TIMESTAMP DATABASE DEFAULT DEFERRABLE DEFERRED DELETE DESC DETACH DISTINCT DO DROP EACH ELSE END ESCAPE EXCEPT EXCLUDE EXCLUSIVE EXISTS EXPLAIN FAIL FILTER 
+    FIRST FOLLOWING FOR FOREIGN FROM FULL GENERATED GLOB GROUP GROUPS HAVING IF IGNORE IMMEDIATE IN INDEX INDEXED INITIALLY INNER INSERT INSTEAD INTERSECT INTO IS ISNULL JOIN KEY LAST LEFT LIKE 
+    LIMIT MATCH NATURAL NO NOT NOTHING NOTNULL NULL NULLS OF OFFSET ON OR ORDER OTHERS OUTER OVER PARTITION PLAN PRAGMA PRECEDING PRIMARY QUERY RAISE RANGE RECURSIVE REFERENCES REGEXP REINDEX 
+    RELEASE RENAME REPLACE RESTRICT RIGHT ROLLBACK ROW ROWS SAVEPOINT SELECT SET TABLE TEMP TEMPORARY THEN TIES TO TRANSACTION TRIGGER UNBOUNDED UNION UNIQUE UPDATE USING VACUUM VALUES VIEW 
+    VIRTUAL WHEN WHERE WINDOW WITH WITHOUT
+  '''.lower().split())
+    
+    
+    
 class Dialect(object):
   '''
     :param version: The database version.  Example: `10`, `'9.2.6'`, etc.
@@ -344,6 +364,7 @@ class Dialect(object):
   '''
   GENERIC = GenericDialect()
   POSTGRES = PostgresDialect()
+  SQLITE = SQLiteDialect()
   
 
 from .evolve import Diff

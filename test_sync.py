@@ -43,6 +43,8 @@ class BaseSync:
     cls.db.evolve()
 
   def setUp(self):
+    self.tables['C'].ALL.delete()
+    self.tables['B'].ALL.delete()
     for tbl in self.tables.values():
       tbl.ALL.delete()
 
@@ -167,12 +169,24 @@ class BaseSync:
     B.ALL.insert(a_id=a_id)
     self.assertEqual(A.ALL.inner_join(B, on=A.id==B.a_id).first().id, a_id)
 
-  def test_joins(self):
+  def test_left_join(self):
     a_id = A.ALL.insert()
     B.ALL.insert(a_id=None)
     self.assertEqual(A.ALL.left_join(B, on=A.id==B.a_id).first().id, a_id)
+
+  def test_inner_join(self):
+    a_id = A.ALL.insert()
+    B.ALL.insert(a_id=None)
     self.assertEqual(A.ALL.inner_join(B, on=A.id==B.a_id).first(), None)
+
+  def test_outer_join(self):
+    a_id = A.ALL.insert()
+    B.ALL.insert(a_id=None)
     self.assertEqual(len(list(A.ALL.full_outer_join(B, on=A.id==B.a_id))), 2)
+
+  def test_right_join(self):
+    a_id = A.ALL.insert()
+    B.ALL.insert(a_id=None)
     self.assertEqual(len(list(A.ALL.right_join(B, on=A.id==B.a_id))), 1)
 
   def test_join_query(self):

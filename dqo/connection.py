@@ -37,9 +37,10 @@ class Connection(object):
       self._raw_conn.close()
     TLS.conn = None
     
-  def sync_execute(self, sql, args):
+  def sync_execute(self, sql, args, f_cur=None):
     cur = self._raw_conn.cursor()
     cur.execute(sql, args)
+    if f_cur: f_cur(cur)
     return
     
   def execute_all(self, cmds):

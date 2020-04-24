@@ -71,6 +71,8 @@ class PostgresAsyncPooled(unittest.TestCase):
 
 class PostgresEvolve(BaseEvolve, unittest.TestCase):
 
+  pk_int = 'serial'
+
   def setUp(self):
     os.system('createdb dqo_test')
     super().setUp()

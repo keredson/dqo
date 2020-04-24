@@ -2,6 +2,7 @@ import asyncio, inspect, re
 
 from .query import Query
 from .column import Column, PrimaryKey, ForeignKey, Index
+from .util import get_running_loop
   
   
 class BaseRow(object):
@@ -32,7 +33,7 @@ class BaseRow(object):
         self.__dict__[c.name] = v
   
   def insert(self):
-    if asyncio.get_running_loop():
+    if get_running_loop():
       async def f():
         pk = await self._tbl.ALL.insert(**self.__dict__)
         self.__dqoi_save_pk(pk)
@@ -50,7 +51,7 @@ class BaseRow(object):
   def update(self):
     if not self._tbl._dqoi_pk: raise Exception("cannot update a row without a primary key")
     q = self._tbl.ALL.set(**{x:self.__dict__.get(x) for x in self._dirty}).where(*[c==self.__dict__.get(c.name) for c in self._tbl._dqoi_pk.columns])
-    if asyncio.get_running_loop():
+    if get_running_loop():
       async def f():
         await q.update()
         self.__dict__['_dirty'] = set()
@@ -61,7 +62,7 @@ class BaseRow(object):
   
   def delete(self):
     if not self._tbl._dqoi_pk: raise Exception("cannot delete a row without a primary key")
-    if asyncio.get_running_loop():
+    if get_running_loop():
       async def f():
         await self._tbl.ALL.where(*[c==self.__dict__.get(c.name) for c in self._tbl._dqoi_pk.columns]).delete()
         self.__dict__['_new'] = True
